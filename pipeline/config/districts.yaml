@@ -1,0 +1,17 @@
+# PRAHARI district registry.
+# Grid math (per district): nodes_per_axis = 2*half_span/node_step + 1;
+#                           cells_per_axis = 2*half_span/cell_step + 1.
+# Farrukhabad below: 5x5 = 25 weather nodes (one Open-Meteo call), 21x21 = 441 cells.
+schema_version: "2.0.0"
+
+districts:
+  - code: farrukhabad
+    name: Farrukhabad
+    state: Uttar Pradesh
+    id_prefix: FRK
+    center: { lat: 27.40, lon: 79.60 }   # potato belt, Ganga plain (flat -> lapse ~= 0)
+    half_span_deg: 0.20                   # ~44 km box
+    node_step_deg: 0.10                   # ~11 km weather nodes (~Open-Meteo native)
+    cell_step_deg: 0.02                   # ~2 km computation cells
+    model: potato_late_blight_hutton      # -> pipeline/config/models.yaml
+    active: true

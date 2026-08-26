@@ -1,0 +1,339 @@
+/* PRAHARI farmer app — layout only. Every colour, size and spacing value comes from
+   tokens.css (PRD §22.2). No literal hex codes belong in this file. */
+
+* { box-sizing: border-box; }
+
+html, body, #root { height: 100%; margin: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  line-height: 1.55;
+  -webkit-text-size-adjust: 100%;
+}
+
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+
+.mono { font-family: var(--font-mono); font-size: var(--text-xs); }
+.muted { color: var(--text-muted); }
+
+.app {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+  max-width: 34rem;   /* single-column phone layout; centred on a laptop for the demo */
+  margin: 0 auto;
+  background: var(--bg);
+}
+
+/* ---------- top bar ---------- */
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--s-3);
+  padding: var(--s-3) var(--s-4);
+  background: var(--brand);
+  color: #FFFFFF;
+}
+
+.topbar__title {
+  margin: 0;
+  font-size: var(--text-xl);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.topbar__lang {
+  min-height: var(--touch-min);
+  min-width: var(--touch-min);
+  padding: 0 var(--s-4);
+  font-size: var(--text-base);
+  font-family: inherit;
+  color: #FFFFFF;
+  background: rgba(255, 255, 255, 0.16);
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+
+/* Live/demo view switcher.
+   🔴 Solid light background, not the translucent treatment the language button uses: a <select>
+   with a transparent background renders its dropdown options white-on-white in several Android
+   browsers, which would hide the demo list entirely on exactly the cheap devices this app
+   targets. The control that selects synthetic data must never be the invisible one. */
+.topbar__view {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 12rem;
+  min-height: var(--touch-min);
+  padding: 0 var(--s-2);
+  font-family: inherit;
+  font-size: var(--text-sm);
+  color: var(--text);
+  background: var(--surface-raised);
+  border: 2px solid var(--border-strong);
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+
+/* ---------- main scroll area ---------- */
+
+.main {
+  flex: 1;
+  padding: var(--s-4) var(--s-4) var(--s-8);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+}
+
+/* ---------- data age (P5) ---------- */
+
+.age {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+  padding: var(--s-3) var(--s-4);
+  border-radius: var(--radius);
+  font-size: var(--text-sm);
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+
+.age__dot { width: 0.625rem; height: 0.625rem; border-radius: 50%; flex: none; }
+.age--fresh .age__dot { background: var(--risk-safe); }
+.age--aging .age__dot { background: var(--risk-watch); }
+.age--stale .age__dot,
+.age--very_stale .age__dot { background: var(--risk-act); }
+
+/* Stale data is loud, not subtle. L7: never show old data as if it were current. */
+.age--stale, .age--very_stale {
+  background: var(--risk-act);
+  border-color: var(--risk-act);
+  color: var(--on-risk-act);
+}
+.age--stale .age__dot, .age--very_stale .age__dot { background: var(--on-risk-act); }
+.age__warn { width: 100%; font-size: var(--text-base); }
+
+/* ---------- panels (error / empty / degraded) ---------- */
+
+.panel {
+  padding: var(--s-4);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 6px solid var(--border);
+  border-radius: var(--radius);
+}
+.panel h2 { margin: 0 0 var(--s-2); font-size: var(--text-lg); }
+.panel p { margin: 0 0 var(--s-2); }
+.panel--error { border-left-color: var(--risk-act); }
+.panel--degraded {
+  border-left-color: var(--risk-watch);
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
+/* 🔴 Synthetic demo weather is louder than any degradation notice, and deliberately uses the act
+   colour. A degradation says "some of this forecast is missing"; this says "none of this is a
+   forecast". Amber would file them at the same volume, and the harm being prevented here — a
+   farmer spending money on chemicals because of weather that was invented to demo a feature — is
+   the more serious of the two. */
+.panel--demo {
+  background: var(--surface-raised);
+  border-color: var(--risk-act);
+  border-left-color: var(--risk-act);
+}
+.panel--demo h2 { color: var(--risk-act); }
+
+.btn {
+  min-height: var(--touch-min);
+  padding: 0 var(--s-6);
+  font-family: inherit;
+  font-size: var(--text-base);
+  color: #FFFFFF;
+  background: var(--brand);
+  border: none;
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+
+/* ---------- field card ---------- */
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+.card--primary { box-shadow: 0 2px 10px rgba(15, 23, 42, 0.12); }
+
+.card__band {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  padding: var(--s-3) var(--s-4);
+  font-size: var(--text-lg);
+  font-weight: 700;
+  min-height: var(--touch-min);
+}
+.card__band-icon { font-size: var(--text-xl); }
+.card__crop { margin-left: auto; font-size: var(--text-sm); font-weight: 600; opacity: 0.9; }
+
+.card__body { padding: var(--s-4); display: flex; flex-direction: column; gap: var(--s-3); }
+.card__name { margin: 0; font-size: var(--text-xl); font-weight: 700; }
+.card__area { margin: 0; font-size: var(--text-sm); color: var(--text-muted); }
+.card__action { margin: 0; font-size: var(--text-lg); }
+.card__degraded { margin: 0; font-size: var(--text-sm); color: var(--text-muted); }
+
+/* ---------- play button (largest control on the card) ---------- */
+
+.play {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  width: 100%;
+  min-height: var(--touch-primary);
+  padding: 0 var(--s-4);
+  font-family: inherit;
+  font-size: var(--text-lg);
+  font-weight: 700;
+  text-align: left;
+  color: #FFFFFF;
+  background: var(--brand);
+  border: none;
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+.play:disabled { background: var(--border); color: var(--text-muted); cursor: not-allowed; }
+.play__icon { font-size: var(--text-2xl); }
+.play__dur { font-weight: 400; font-size: var(--text-sm); opacity: 0.85; }
+
+/* ---------- why panel ---------- */
+
+.why { border-top: 1px solid var(--border); padding-top: var(--s-3); }
+.why__depth1 { display: flex; flex-direction: column; gap: var(--s-2); }
+.why__row { display: flex; gap: var(--s-3); align-items: flex-start; font-size: var(--text-base); }
+
+.why__toggle {
+  margin-top: var(--s-3);
+  min-height: var(--touch-min);
+  width: 100%;
+  font-family: inherit;
+  font-size: var(--text-base);
+  color: var(--brand);
+  background: transparent;
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+
+.why__depth2 { margin-top: var(--s-3); font-size: var(--text-sm); }
+.kv { display: grid; grid-template-columns: 1fr auto; gap: var(--s-2) var(--s-4); margin: 0; }
+.kv dt { color: var(--text-muted); }
+.kv dd { margin: 0; font-family: var(--font-mono); text-align: right; }
+.why__meta {
+  margin: var(--s-3) 0 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  word-break: break-all;
+}
+
+/* ---------- skeleton (§21.5 loading) ---------- */
+
+.card--skeleton .card__band { min-height: var(--touch-min); }
+.sk { background: var(--border); border-radius: var(--radius); animation: pulse 1.4s ease-in-out infinite; }
+.sk--title { height: var(--text-xl); width: 60%; }
+.sk--line { height: var(--text-base); width: 90%; }
+.sk--play { height: var(--touch-primary); width: 100%; }
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
+@media (prefers-reduced-motion: reduce) { .sk { animation: none; } }
+
+/* ---------- add field / footnote ---------- */
+
+.addfield {
+  min-height: var(--touch-min);
+  font-family: inherit;
+  font-size: var(--text-base);
+  color: var(--text);
+  background: var(--surface);
+  border: 2px dashed var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+.addfield:disabled { cursor: not-allowed; color: var(--text-muted); }
+
+.footnote { margin: 0; font-size: var(--text-xs); color: var(--text-muted); text-align: center; }
+
+/* ---------- bottom nav (§21.1) ---------- */
+
+.bottomnav {
+  position: sticky;
+  bottom: 0;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.bottomnav__item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-height: var(--touch-primary);
+  font-family: inherit;
+  font-size: var(--text-xl);
+  color: var(--text);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+.bottomnav__item span { font-size: var(--text-xs); }
+.bottomnav__item:disabled { color: var(--text-muted); cursor: not-allowed; }
+.bottomnav__item--active { color: var(--brand); font-weight: 700; box-shadow: inset 0 3px 0 var(--brand); }
+
+/* Visible focus for every control — sunlight glare makes subtle focus rings useless. */
+:focus-visible { outline: 3px solid var(--brand); outline-offset: 2px; }
+
+/* ---------- map screen (§21.2) ---------- */
+
+.map { display: flex; flex-direction: column; gap: var(--s-3); }
+.map__canvas {
+  height: 60vh;
+  min-height: 20rem;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  overflow: hidden;
+  background: var(--surface);
+}
+.map__locate { align-self: stretch; }
+.map__status { margin: 0; font-size: var(--text-sm); color: var(--text-muted); }
+
+/* Field labels sit on satellite imagery, so they need their own opaque backing to stay legible
+   over both bright soil and dark vegetation. */
+.map__label {
+  background: rgba(15, 23, 42, 0.88);
+  color: #FFFFFF;
+  border: none;
+  border-radius: var(--radius);
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  padding: 4px 8px;
+  box-shadow: none;
+}
+.map__label::before { display: none; }

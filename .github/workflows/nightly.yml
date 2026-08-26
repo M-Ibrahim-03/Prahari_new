@@ -1,0 +1,35 @@
+name: nightly
+# The zero-cost "server" (PRD §28): GitHub Actions cron runs the pipeline and commits the
+# static artefacts. No paid infrastructure. 20:30 UTC = 02:00 IST.
+on:
+  schedule:
+    - cron: "30 20 * * *"
+  workflow_dispatch:        # allow manual runs (demo / judges)
+
+permissions:
+  contents: write           # needed to commit the generated artefacts
+
+jobs:
+  produce-artefacts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install deps
+        run: pip install -r requirements.txt
+      - name: Run pipeline (live Open-Meteo, keyless)
+        run: python -m pipeline.nightly
+      - name: Verify ledger chain before committing
+        run: |
+          python -c "from pipeline.ledger import verify_chain; import sys; \
+          r = verify_chain('artefacts/ledger.jsonl'); print(r); \
+          sys.exit(0 if r['ok'] else 1)"
+      - name: Commit artefacts
+        run: |
+          git config user.name  "prahari-bot"
+          git config user.email "prahari-bot@users.noreply.github.com"
+          git add artefacts/
+          git diff --cached --quiet || git commit -m "nightly: artefacts $(date -u +%FT%TZ)"
+          git push

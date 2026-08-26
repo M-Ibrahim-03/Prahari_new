@@ -1,0 +1,25 @@
+name: ci
+# Runs on every push/PR: the engine must stay pure and provably correct, and the alert
+# ledger's hash chain must be intact (PRD §36 — "CI verification on every push").
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install deps
+        run: pip install -r requirements.txt
+      - name: Run tests (purity + silent-bug + adapters + ledger)
+        run: python -m pytest
+      - name: Verify alert ledger chain
+        run: |
+          python -c "from pipeline.ledger import verify_chain; import sys; \
+          r = verify_chain('artefacts/ledger.jsonl'); print(r); \
+          sys.exit(0 if r['ok'] else 1)"

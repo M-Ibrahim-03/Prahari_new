@@ -1,0 +1,87 @@
+# Demo scenarios — synthetic weather INPUTS for the real engine (§29.7 replay).
+#
+# 🔴 These are not results. Each scenario describes weather; the engine decides the band. A
+# scenario run writes to its own district code with data_status "scenario" so it can never be
+# mistaken for a forecast.
+#
+# Why they are needed: potato late blight is a rabi-season disease (Dec-Feb in Farrukhabad) and
+# Wallin's development range stops at 26.6 C. A run in August correctly returns `safe` for every
+# cell, which exercises none of the alerting path. These scenarios reproduce the conditions the
+# model was actually built for.
+#
+# 🔴 HOW TO TUNE THESE — the mistake worth not repeating. The first draft of blight_outbreak set
+# cold nights (11 C) and a 14 h dew period and expected `act`. Every cell came back safe, and the
+# engine was right: Wallin keys DSV off wet-spell DURATION, and 14 h in the 11.7-15.0 C band sits
+# below the 15 h breakpoint, so DSV is 0 and nothing accumulates. Blight epidemics are not built
+# by cold dewy nights; they are built by OVERCAST DRIZZLE, where the diurnal range collapses, the
+# afternoon never gets warm enough to dry the canopy, and leaf wetness runs 18-24 h a day. The
+# temperatures below are milder than a clear December night for exactly that reason.
+#
+# Wallin breakpoints (models.yaml), DSV = highest hour-break the wet spell reaches:
+#    7.2-11.6 C:  15h->0  18h->1  21h->2  24h->3
+#   11.7-15.0 C:  12h->0  15h->1  18h->2  21h->3  24h->4
+#   15.1-26.6 C:   9h->0  12h->1  15h->2  18h->3  24h->4
+# Spray at 18 accumulated, amber at 12. Over a 10-day window that means ~DSV 2/day to reach act.
+#
+# Values are typical Indo-Gangetic plain rabi conditions, not measurements from a station.
+
+scenarios:
+
+  blight_outbreak:
+    description: >
+      A settled overcast drizzle spell, which is how late blight epidemics actually build: thick
+      cloud caps the afternoon near 17 C, nights stay mild, and the canopy never fully dries. Both
+      Hutton legs are met on consecutive days and leaf wetness runs long enough for Wallin severity
+      to accumulate past the spray threshold. The humid air mass has an edge, so the west of the
+      district dries by mid-morning and stays safe while the east escalates to spray — the whole
+      point of computing below district level.
+    start_date: "2026-12-18"
+    days: 10
+    day_temp_c: 17.0        # overcast: the afternoon high is suppressed, so the canopy stays wet
+    night_temp_c: 12.5      # >= 10 C, so the Hutton minimum-temperature leg is satisfied
+    wet_hours: 17           # district mean; the gradient below spreads it 10-24 h east to west
+    wet_rh: 97.0
+    dry_rh: 78.0            # still humid even "dry": it is an overcast day, not a sunny one
+    precip_mm: 2.4          # light persistent drizzle, not a downpour
+    lat_gradient_c: 5.0     # ~1 C across the district, so downscaling has real variation
+    lon_gradient_rh: 4.0
+    wet_hours_gradient_h: 35.0   # ~+-7 h across +-0.2 deg: dry-off time varies west to east
+
+  borderline_watch:
+    description: >
+      The uncomfortable middle: the criterion is met and leaf wetness just reaches Wallin's first
+      breakpoint, so severity accrues at 1 DSV a day and after ten days sits below the spray
+      threshold. Watch, not spray. This is the case where a false alarm is most tempting and most
+      damaging. Roughly a third of the district still falls back to safe, by two different routes
+      that are both worth seeing: in the west the humidity gradient puts RH at 89.4 %, just under
+      the 90 % threshold, so the wet-hours leg never starts at all; along the southern edge the
+      nights dip to 9.8 C and the minimum-temperature leg fails instead. Every number in this
+      scenario sits within half a degree or a percent of a threshold, which is the point.
+    start_date: "2026-12-18"
+    days: 10
+    day_temp_c: 16.0
+    night_temp_c: 10.4      # barely above the 10 C threshold
+    wet_hours: 16           # past the 6 h Hutton leg and Wallin's 15 h break, short of 18 h
+    wet_rh: 91.0            # barely above 90 %
+    dry_rh: 60.0
+    precip_mm: 0.4
+    lat_gradient_c: 3.0
+    lon_gradient_rh: 8.0
+    wet_hours_gradient_h: 5.0    # +-1 h: keeps the district inside one Wallin break
+
+  dry_spell:
+    description: >
+      Cool but dry: nights are cold enough, yet leaves never stay wet long enough. Proves the
+      model reports safe for the right reason — the Hutton wet-hours leg fails outright — rather
+      than because nothing was computed. The control case for the other two.
+    start_date: "2026-12-18"
+    days: 10
+    day_temp_c: 21.0
+    night_temp_c: 9.0
+    wet_hours: 3            # below the 6 h leg
+    wet_rh: 93.0
+    dry_rh: 45.0
+    precip_mm: 0.0
+    lat_gradient_c: 3.0
+    lon_gradient_rh: 6.0
+    wet_hours_gradient_h: 4.0

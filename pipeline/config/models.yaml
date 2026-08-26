@@ -1,0 +1,28 @@
+# PRAHARI disease / pest models. 🔴 All science lives in this data file, NOT in
+# if-statements (PRD §8.4.3). The pipeline loads this and passes params into the pure
+# engine functions.
+#
+# 🔴 [VERIFY] item 1 (highest priority in the project): confirm the Wallin dsv_table
+#    band boundaries and breakpoints against Wallin (1962) before trusting DSV output.
+
+models:
+  potato_late_blight_hutton:
+    version: "2.0.0"
+    crop: potato
+    pathogen: "Phytophthora infestans"
+    pathogen_kind: oomycete          # 🔴 NOT a fungus
+    criterion: hutton
+    params:
+      rh_threshold: 90.0             # inclusive (>=)
+      min_wet_hours: 6
+      min_temp_c: 10.0
+      consecutive_days: 2            # 🔴 consecutive, not total
+    severity:
+      method: wallin_dsv
+      spray_threshold_dsv: 18        # accumulated DSV -> "act"
+      amber_threshold_dsv: 12        # accumulated DSV -> "watch"
+      dsv_table:                     # [VERIFY] — §43 item 1
+        - { t_min: 7.2,  t_max: 11.6, breaks: [[15, 0], [18, 1], [21, 2], [24, 3]] }
+        - { t_min: 11.7, t_max: 15.0, breaks: [[12, 0], [15, 1], [18, 2], [21, 3], [24, 4]] }
+        - { t_min: 15.1, t_max: 26.6, breaks: [[9, 0], [12, 1], [15, 2], [18, 3], [24, 4]] }
+    citation: "Hutton criteria; Wallin (1962); Smith (1956); BLITECAST (Krause et al. 1975)"

@@ -1,0 +1,9 @@
+# PRAHARI Python dependencies (Phase 1 = pure engine + pipeline).
+# 🔴 requests/numpy may be used by adapters/ and engine/ respectively, but NEVER
+#    may engine/ import a network library — enforced by tests/test_purity.py.
+
+pytest>=8.0            # test runner (silent-bug tests + purity test)
+pyyaml>=6.0            # pipeline reads models.yaml / districts.yaml
+python-dotenv>=1.0     # adapters load secrets from .env (dev); CI uses real env
+numpy>=1.26            # pure numeric work in engine/ (interpolation, grids)
+requests>=2.31         # adapters ONLY (weather, elevation, overpass) — not engine/

@@ -1,0 +1,17 @@
+{
+  "name": "प्रहरी — फ़सल चेतावनी",
+  "short_name": "प्रहरी",
+  "description": "आलू की झुलसा बीमारी की पूर्व चेतावनी — आपके खेत के लिए",
+  "lang": "hi",
+  "dir": "ltr",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#FFFFFF",
+  "theme_color": "#166534",
+  "icons": [
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "/icon-maskable.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" }
+  ]
+}

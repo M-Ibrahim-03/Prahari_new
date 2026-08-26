@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" width="192" height="192" role="img" aria-label="प्रहरी">
+  <rect width="192" height="192" rx="36" fill="#15803D"/>
+  <!-- A sentinel's eye over a leaf: "prahari" means watchman. -->
+  <path d="M96 44c-30 0-52 26-52 52s22 52 52 52 52-26 52-52-22-52-52-52z" fill="none" stroke="#FFFFFF" stroke-width="8" opacity="0.35"/>
+  <path d="M62 112c0-30 22-52 52-52 4 14 4 28 0 40-8 22-30 30-52 12z" fill="#FFFFFF"/>
+  <path d="M62 112c14-16 30-28 48-36" stroke="#15803D" stroke-width="6" stroke-linecap="round" fill="none"/>
+</svg>

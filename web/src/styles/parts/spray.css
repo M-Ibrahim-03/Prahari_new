@@ -1,0 +1,202 @@
+/* Spray screen (§13.3). Layout only — every band colour arrives as an inline style from
+   bandToSemantic.ts, which is the only file allowed to own one. */
+
+.spray {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+}
+
+/* Stale data outranks the verdict it qualifies, so it is loud and uses the act colour: a spray
+   decision taken on old data is the most expensive mistake this screen can cause. */
+.spray__stale {
+  margin: 0;
+  padding: var(--s-3) var(--s-4);
+  background: var(--risk-act);
+  color: var(--on-risk-act);
+  border-radius: var(--radius);
+  font-size: var(--text-base);
+  font-weight: 700;
+}
+
+/* ---------- verdict ---------- */
+
+.spray__verdict {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--s-3);
+  padding: var(--s-4);
+  border-radius: var(--radius-lg);
+}
+
+.spray__verdict-icon {
+  font-size: var(--text-2xl);
+  line-height: 1.1;
+  flex: none;
+}
+
+.spray__verdict-copy {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  min-width: 0;
+}
+
+.spray__verdict-title {
+  margin: 0;
+  font-size: var(--text-xl);
+  font-weight: 700;
+}
+
+.spray__verdict-sub {
+  margin: 0;
+  font-size: var(--text-base);
+}
+
+/* ---------- per-band sections ---------- */
+
+.spray__section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+}
+
+.spray__section-head {
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: 700;
+}
+
+.spray__unknown-body {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
+.spray__row {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--s-3);
+  padding: var(--s-4);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+}
+
+.spray__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  padding: var(--s-1) var(--s-3);
+  border-radius: var(--radius);
+  font-size: var(--text-sm);
+  font-weight: 700;
+}
+
+.spray__name { margin: 0; font-size: var(--text-lg); font-weight: 700; }
+.spray__area { margin: 0; font-size: var(--text-sm); color: var(--text-muted); }
+.spray__what { margin: 0; font-size: var(--text-base); }
+
+/* "No spraying yet" must survive a farmer who cannot distinguish amber from red in sunlight, so
+   it is bordered and bold text rather than a tinted pill. */
+.spray__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  margin: 0;
+  padding: var(--s-2) var(--s-3);
+  background: var(--surface-raised);
+  border: 2px solid var(--border-strong);
+  border-radius: var(--radius);
+  font-size: var(--text-sm);
+  font-weight: 700;
+}
+
+/* The timing is the answer this screen exists to give — it gets the raised box and the largest
+   body type on the row. */
+.spray__when {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--s-3);
+  width: 100%;
+  padding: var(--s-3);
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.spray__when-icon { font-size: var(--text-lg); line-height: 1.2; flex: none; }
+
+/* min-width:0 so a long Devanagari timing sentence wraps inside the flex row instead of forcing
+   the card wider than a 320px screen. */
+.spray__when-copy { display: block; min-width: 0; }
+
+.spray__when-label {
+  display: block;
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+.spray__when-text {
+  display: block;
+  font-size: var(--text-lg);
+  font-weight: 700;
+}
+
+.spray__why {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--s-2);
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
+/* ---------- honest placeholders ---------- */
+
+/* Dashed border already means "not built yet" in this app (.addfield), so the same signal is
+   reused rather than inventing a second vocabulary for the same idea. */
+.spray__note {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--s-2);
+  padding: var(--s-4);
+  background: var(--surface);
+  border: 2px dashed var(--border-strong);
+  border-radius: var(--radius-lg);
+}
+
+.spray__note-title {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--s-2);
+  margin: 0;
+  font-size: var(--text-base);
+  font-weight: 700;
+}
+
+/* Full text colour, not muted: this is the paragraph that stops a farmer acting on a dose we
+   refused to give, so it must not read as fine print. */
+.spray__note-body { margin: 0; font-size: var(--text-base); }
+.spray__note-why { margin: 0; font-size: var(--text-sm); color: var(--text-muted); }
+
+.spray__tag {
+  padding: var(--s-1) var(--s-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+/* ---------- attribution ---------- */
+
+.spray__meta {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  word-break: break-all;
+}

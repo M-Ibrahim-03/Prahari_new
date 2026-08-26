@@ -1,0 +1,29 @@
+# 🔴 SECRETS — never commit real keys (PRD §33.2)
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+*.egg-info/
+
+# Node / web
+node_modules/
+dist/
+.vite/
+.vercel/
+.turbo/
+*.tsbuildinfo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Committed on purpose (PRD §29.4) — do NOT ignore:
+#   artefacts/   (generated JSON/GeoJSON/audio, committed intentionally)
+#   pipeline/config/*.yaml
+#   data committed per district (elevation, landmarks)

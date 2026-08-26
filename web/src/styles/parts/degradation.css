@@ -1,0 +1,98 @@
+/* Degradation ladder notices (PRD §28.3) — owned by components/DegradationNotice.tsx.
+   Every value is a token from tokens.css; the risk tokens are never redefined here, so a
+   critical notice is the same red as an 'act' band and both themes follow for free. */
+
+.degrade {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+
+.degrade__group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  padding: var(--s-3) var(--s-4);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 6px solid var(--border);
+  border-radius: var(--radius);
+}
+
+/* 🔴 Critical fills with --risk-act rather than accenting an edge. L7 sits directly above the
+   field cards, and a farmer scrolling to their advisory must not be able to skim past the
+   sentence that says the forecast is yesterday's. */
+.degrade__group--critical {
+  background: var(--risk-act);
+  border-color: var(--risk-act);
+  color: var(--on-risk-act);
+}
+
+.degrade__group--warn {
+  border-left-color: var(--risk-watch);
+}
+
+/* Info keeps the neutral border on purpose: quiet is the whole point of this severity. */
+.degrade__group--info {
+  color: var(--text-muted);
+}
+
+.degrade__row {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--s-1) var(--s-3);
+  align-items: start;
+}
+
+.degrade__icon {
+  font-size: var(--text-lg);
+  line-height: 1.3;
+}
+
+.degrade__text {
+  margin: 0;
+  font-size: var(--text-sm);
+}
+
+.degrade__group--critical .degrade__text {
+  font-size: var(--text-base);
+  font-weight: 700;
+}
+
+/* The level code sits under the sentence in the text column, not beside it: at 320 px a
+   right-aligned "L7 · weather_failed" steals the width the sentence needs. */
+.degrade__code {
+  grid-column: 2;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+/* Full white, not muted-with-opacity: --text-muted on --risk-act measures far below AA, and
+   blending white down to fake "quiet" would break the contrast the token was chosen for. */
+.degrade__group--critical .degrade__code {
+  color: var(--on-risk-act);
+}
+
+/* An unrecognised note carries an arbitrary pipeline string, which can be longer than the
+   screen. It must wrap rather than overflow — surfacing it verbatim is pointless if half of
+   it is clipped off the right edge. */
+.degrade__code--raw {
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+
+.degrade__toggle {
+  width: 100%;
+  min-height: var(--touch-min);
+  /* Vertical padding is insurance, not layout: min-height already guarantees the 56 px target,
+     and this keeps the label off the edge on any engine that does not centre button content. */
+  padding: var(--s-2) 0;
+  font-family: inherit;
+  font-size: var(--text-sm);
+  text-align: left;
+  color: var(--text-muted);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}

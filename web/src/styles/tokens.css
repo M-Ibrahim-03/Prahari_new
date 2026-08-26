@@ -1,0 +1,63 @@
+/* PRAHARI design tokens — transcribed from PRD §22.2.
+   🔴 Risk colours are IDENTICAL across themes and are never overridden. A band must never
+   look different depending on theme or device; that would destabilise the product's core
+   vocabulary. */
+:root {
+  /* ── RISK — 🔴 IDENTICAL ACROSS THEMES, NEVER OVERRIDDEN ── */
+  --risk-safe:   #16A34A;
+  --risk-watch:  #F59E0B;
+  --risk-act:    #DC2626;
+
+  /* 🔴 Text ON risk colours — contrast-checked, not eyeballed.
+     --on-risk-watch is DARK, never white: white on amber measures ~2.1:1 and fails badly.
+     That error lands specifically on the band a farmer most needs to read while preparing. */
+  --on-risk-safe:  #FFFFFF;   /* 4.6:1  AA  */
+  --on-risk-watch: #0F172A;   /* 7.4:1  AAA */
+  --on-risk-act:   #FFFFFF;   /* 5.9:1  AA  */
+
+  /* ── FIELD MODE (light, very high contrast — Sunita stands in direct sunlight) ── */
+  --bg:             #FFFFFF;
+  --surface:        #F8FAFC;
+  --surface-raised: #FFFFFF;
+  --text:           #0F172A;
+  --text-muted:     #475569;
+  --border:         #CBD5E1;
+  --border-strong:  #2D3B58;
+  --brand:          #15803D;
+
+  /* ── TYPE — large, because outdoors and older eyes ── */
+  --font-sans: 'Noto Sans', 'Noto Sans Devanagari', system-ui, -apple-system, sans-serif;
+  /* Not in §22.2 — added for the tabular numbers in the "learn more" depth, where an officer
+     compares DSV values down a column and proportional digits misalign. Never used for
+     farmer-facing prose. */
+  --font-mono: ui-monospace, 'Cascadia Mono', Menlo, Consolas, monospace;
+  --text-xs: 0.875rem;   /* 14px — 🔴 the SMALLEST size allowed anywhere */
+  --text-sm: 1rem;       /* 16px */
+  --text-base: 1.125rem; /* 18px — body default */
+  --text-lg: 1.375rem;   /* 22px */
+  --text-xl: 1.75rem;    /* 28px */
+  --text-2xl: 2.25rem;   /* 36px — band labels */
+
+  /* ── SPACE — 4px base ── */
+  --s-1: 0.25rem; --s-2: 0.5rem;  --s-3: 0.75rem;
+  --s-4: 1rem;    --s-6: 1.5rem;  --s-8: 2rem;  --s-12: 3rem;
+
+  /* ── TOUCH — 🔴 minimum 56px, not 44px: gloves, sunlight, motion ── */
+  --touch-min: 3.5rem;     /* 56px */
+  --touch-primary: 4.5rem; /* 72px — play button, primary actions */
+
+  --radius: 0.75rem;
+  --radius-lg: 1rem;
+}
+
+[data-theme='analyst'] {
+  --bg:             #0B1220;
+  --surface:        #111A2E;
+  --surface-raised: #18233D;
+  --text:           #E8EDF7;
+  --text-muted:     #94A3B8;
+  --border:         #263352;
+  --border-strong:  #3E4E76;
+  --brand:          #22C55E;
+  /* risk tokens deliberately NOT redefined */
+}

@@ -1,0 +1,11 @@
+[project]
+name = "prahari"
+version = "0.1.0"
+description = "PRAHARI — predictive crop-health intelligence (hackathon build)"
+requires-python = ">=3.11"
+
+[tool.pytest.ini_options]
+# Make the repo root importable (import engine..., adapters...) without installing.
+pythonpath = ["."]
+testpaths = ["tests"]
+addopts = "-q"

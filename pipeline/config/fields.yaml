@@ -1,0 +1,41 @@
+# Demo fields — the hackathon stand-in for farmer-drawn boundaries.
+#
+# ⚠️ HACKATHON SCOPE: in the real product these come from a farmer walking their plot boundary
+# with GPS (§12) and naming it in their own words. We cannot bring real farmers to a 24-hour
+# hackathon, so these three fields are fixtures. Everything downstream — resolution, advisory,
+# audio, UI — is the real code path; only the source of the polygons is stubbed.
+#
+# 🔴 Names are in the farmer's own words, not "Field 1" / "Plot A" (§20.4). The name is the
+#    first thing the voice advisory says, which is what makes an advisory locatable.
+schema_version: "2.0.0"
+
+fields:
+  - id: fld_nahar
+    district: farrukhabad
+    name_hi: नहर वाला खेत          # "the canal field" — card label (direct case)
+    name_hi_spoken: नहर वाले खेत   # oblique case, for "आपके ___ में" in the spoken sentence
+    name_en: Canal field
+    crop: potato
+    center: { lat: 27.34, lon: 79.52 }
+    area_local: "२ बीघा"
+    sown_on: "2026-08-01"
+
+  - id: fld_school
+    district: farrukhabad
+    name_hi: स्कूल के पीछे          # "behind the school"
+    name_hi_spoken: स्कूल के पीछे वाले खेत
+    name_en: Behind the school
+    crop: potato
+    center: { lat: 27.46, lon: 79.64 }
+    area_local: "१.५ बीघा"
+    sown_on: "2026-08-05"
+
+  - id: fld_bada
+    district: farrukhabad
+    name_hi: बड़ा खेत               # "the big field"
+    name_hi_spoken: बड़े खेत
+    name_en: Big field
+    crop: potato
+    center: { lat: 27.53, lon: 79.71 }
+    area_local: "३ बीघा"
+    sown_on: "2026-07-28"

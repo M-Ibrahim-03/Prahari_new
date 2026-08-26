@@ -1,0 +1,59 @@
+# Advisory text templates — the four-part script of PRD §14.5.
+# 🔴 Adding a language is a CONFIG EDIT, never a code change. engine/advisory.py takes these in.
+# Keep sentences SHORT and vocabulary SIMPLE: it improves comprehension in every dialect
+# simultaneously, which matters more than the language list suggests (§14.4).
+schema_version: "2.0.0"
+
+languages:
+  hi:
+    name: हिंदी
+    disease: झुलसा
+    crops:
+      potato: आलू
+    # 1. WHICH FIELD — 🔴 always first
+    which: "आपके {field} में"
+    # 2. WHAT
+    what_safe:  "{crop} की {disease} बीमारी का कोई खतरा नहीं है।"
+    what_watch: "{crop} की {disease} बीमारी का खतरा बन रहा है।"
+    what_act:   "{crop} की {disease} बीमारी का खतरा है।"
+    # 3. WHY (brief, no numbers a farmer must interpret)
+    why_wet:      "पिछली रातों में {wet_hours} घंटे तक पत्ते गीले रहे।"
+    why_dry:      "मौसम सूखा है, नमी कम है।"
+    why_too_hot:  "नमी तो है, पर गर्मी ज़्यादा है — इतनी गर्मी में यह बीमारी नहीं बढ़ती।"
+    why_too_cold: "नमी तो है, पर ठंड ज़्यादा है — इतनी ठंड में यह बीमारी नहीं बढ़ती।"
+    # 4. WHEN TO ACT
+    when_safe:          "कुछ नहीं करना है। खेत देखते रहें।"
+    when_watch:         "दवा तैयार रखें और खेत देखते रहें।"
+    when_act:           "{window} छिड़काव करें।"
+    when_act_no_window: "मौसम खुलने पर सुबह जल्दी छिड़काव करें।"
+    # Band vocabulary — §21.3, three bands only
+    band_safe:  सुरक्षित
+    band_watch: ध्यान दें
+    band_act:   छिड़काव करें
+    action_safe:  कुछ नहीं करना है
+    action_watch: दवा तैयार रखें
+    action_act:   बताए समय पर छिड़काव करें
+
+  en:
+    name: English
+    disease: late blight
+    crops:
+      potato: potato
+    which: "In your {field},"
+    what_safe:  "there is no {disease} risk to your {crop}."
+    what_watch: "{disease} risk to your {crop} is building."
+    what_act:   "there is a {disease} risk to your {crop}."
+    why_wet:      "Leaves stayed wet for {wet_hours} hours on recent nights."
+    why_dry:      "The weather is dry and humidity is low."
+    why_too_hot:  "It is humid, but too hot — this disease does not develop in this heat."
+    why_too_cold: "It is humid, but too cold — this disease does not develop in this cold."
+    when_safe:          "Nothing to do. Keep watching your field."
+    when_watch:         "Get medicine ready and keep checking your field."
+    when_act:           "Spray {window}."
+    when_act_no_window: "Spray early in the morning once the weather clears."
+    band_safe:  Safe
+    band_watch: Watch
+    band_act:   Act
+    action_safe:  Nothing to do
+    action_watch: Get medicine ready
+    action_act:   Spray in the window shown
