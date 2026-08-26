@@ -1,0 +1,39 @@
+# PRAHARI Local Area Unit Conversion Table (PRD §7.6)
+# Bigha varies by district across Uttar Pradesh, Bihar, and West Bengal.
+# All calculations store SI square meters and standard hectares internally;
+# local units are rendered for farmer confirmation and communication.
+
+districts:
+  farrukhabad:
+    state: "Uttar Pradesh"
+    local_unit_hi: "बीघा"
+    local_unit_en: "bigha"
+    # In Farrukhabad (Central UP), 1 Pucca Bigha = 2,529.3 m² = 0.25293 ha (~0.625 acres)
+    sqm_per_bigha: 2529.3
+    ha_per_bigha: 0.25293
+    bigha_per_ha: 3.9536
+    sub_unit_hi: "बिस्वा"
+    sub_unit_en: "biswa"
+    biswa_per_bigha: 20
+
+  kannauj:
+    state: "Uttar Pradesh"
+    local_unit_hi: "बीघा"
+    local_unit_en: "bigha"
+    sqm_per_bigha: 2529.3
+    ha_per_bigha: 0.25293
+    bigha_per_ha: 3.9536
+    sub_unit_hi: "बिस्वा"
+    sub_unit_en: "biswa"
+    biswa_per_bigha: 20
+
+  agra:
+    state: "Uttar Pradesh"
+    local_unit_hi: "बीघा"
+    local_unit_en: "bigha"
+    sqm_per_bigha: 2529.3
+    ha_per_bigha: 0.25293
+    bigha_per_ha: 3.9536
+    sub_unit_hi: "बिस्वा"
+    sub_unit_en: "biswa"
+    biswa_per_bigha: 20

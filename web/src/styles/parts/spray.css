@@ -1,5 +1,4 @@
-/* Spray screen (§13.3). Layout only — every band colour arrives as an inline style from
-   bandToSemantic.ts, which is the only file allowed to own one. */
+/* Spray screen (§13.3) — Stitch Modern Agrarian Visual Design. */
 
 .spray {
   display: flex;
@@ -7,19 +6,18 @@
   gap: var(--s-4);
 }
 
-/* Stale data outranks the verdict it qualifies, so it is loud and uses the act colour: a spray
-   decision taken on old data is the most expensive mistake this screen can cause. */
 .spray__stale {
   margin: 0;
   padding: var(--s-3) var(--s-4);
-  background: var(--risk-act);
-  color: var(--on-risk-act);
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid var(--risk-act);
+  color: #ffdad6;
   border-radius: var(--radius);
   font-size: var(--text-base);
   font-weight: 700;
 }
 
-/* ---------- verdict ---------- */
+/* ---------- Verdict Card (High-Impact Hero Banner) ---------- */
 
 .spray__verdict {
   display: flex;
@@ -27,6 +25,9 @@
   gap: var(--s-3);
   padding: var(--s-4);
   border-radius: var(--radius-lg);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+  position: relative;
+  overflow: hidden;
 }
 
 .spray__verdict-icon {
@@ -45,15 +46,17 @@
 .spray__verdict-title {
   margin: 0;
   font-size: var(--text-xl);
-  font-weight: 700;
+  font-weight: 800;
+  letter-spacing: -0.02em;
 }
 
 .spray__verdict-sub {
   margin: 0;
   font-size: var(--text-base);
+  font-weight: 500;
 }
 
-/* ---------- per-band sections ---------- */
+/* ---------- Per-band sections ---------- */
 
 .spray__section {
   display: flex;
@@ -65,6 +68,7 @@
   margin: 0;
   font-size: var(--text-lg);
   font-weight: 700;
+  color: var(--text);
 }
 
 .spray__unknown-body {
@@ -82,6 +86,7 @@
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
 }
 
 .spray__chip {
@@ -89,17 +94,15 @@
   align-items: center;
   gap: var(--s-2);
   padding: var(--s-1) var(--s-3);
-  border-radius: var(--radius);
+  border-radius: var(--radius-sm);
   font-size: var(--text-sm);
   font-weight: 700;
 }
 
-.spray__name { margin: 0; font-size: var(--text-lg); font-weight: 700; }
+.spray__name { margin: 0; font-size: var(--text-lg); font-weight: 700; color: var(--text); }
 .spray__area { margin: 0; font-size: var(--text-sm); color: var(--text-muted); }
-.spray__what { margin: 0; font-size: var(--text-base); }
+.spray__what { margin: 0; font-size: var(--text-base); color: var(--text); }
 
-/* "No spraying yet" must survive a farmer who cannot distinguish amber from red in sunlight, so
-   it is bordered and bold text rather than a tinted pill. */
 .spray__badge {
   display: inline-flex;
   align-items: center;
@@ -107,41 +110,50 @@
   margin: 0;
   padding: var(--s-2) var(--s-3);
   background: var(--surface-raised);
-  border: 2px solid var(--border-strong);
-  border-radius: var(--radius);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
   font-size: var(--text-sm);
   font-weight: 700;
+  color: var(--text);
 }
 
-/* The timing is the answer this screen exists to give — it gets the raised box and the largest
-   body type on the row. */
+/* Timing Card — The Core Decision Widget */
 .spray__when {
   display: flex;
   align-items: flex-start;
   gap: var(--s-3);
   width: 100%;
-  padding: var(--s-3);
+  padding: var(--s-3) var(--s-4);
   background: var(--surface-raised);
-  border: 1px solid var(--border);
+  border: 1px solid var(--primary);
   border-radius: var(--radius);
+  box-shadow: 0 0 12px var(--primary-glow);
 }
 
-.spray__when-icon { font-size: var(--text-lg); line-height: 1.2; flex: none; }
-
-/* min-width:0 so a long Devanagari timing sentence wraps inside the flex row instead of forcing
-   the card wider than a 320px screen. */
+.spray__when-icon { font-size: var(--text-xl); line-height: 1.2; flex: none; color: var(--primary); }
 .spray__when-copy { display: block; min-width: 0; }
 
 .spray__when-label {
   display: block;
   font-size: var(--text-xs);
-  color: var(--text-muted);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--primary);
 }
 
 .spray__when-text {
   display: block;
   font-size: var(--text-lg);
   font-weight: 700;
+  color: var(--text);
+}
+
+.spray__when-reason {
+  display: block;
+  margin-top: var(--s-1);
+  font-size: var(--text-xs);
+  color: var(--text-muted);
 }
 
 .spray__why {
@@ -153,18 +165,15 @@
   color: var(--text-muted);
 }
 
-/* ---------- honest placeholders ---------- */
-
-/* Dashed border already means "not built yet" in this app (.addfield), so the same signal is
-   reused rather than inventing a second vocabulary for the same idea. */
+/* Regulatory Disclaimer Card (Strict Zero-Chemical Refusal) */
 .spray__note {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: var(--s-2);
   padding: var(--s-4);
-  background: var(--surface);
-  border: 2px dashed var(--border-strong);
+  background: rgba(245, 158, 11, 0.08);
+  border: 1px solid rgba(245, 158, 11, 0.3);
   border-radius: var(--radius-lg);
 }
 
@@ -175,24 +184,23 @@
   margin: 0;
   font-size: var(--text-base);
   font-weight: 700;
+  color: #ffddb8;
 }
 
-/* Full text colour, not muted: this is the paragraph that stops a farmer acting on a dose we
-   refused to give, so it must not read as fine print. */
-.spray__note-body { margin: 0; font-size: var(--text-base); }
+.spray__note-body { margin: 0; font-size: var(--text-base); color: var(--text); }
 .spray__note-why { margin: 0; font-size: var(--text-sm); color: var(--text-muted); }
 
 .spray__tag {
   padding: var(--s-1) var(--s-3);
+  background: var(--surface-raised);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border-radius: var(--radius-sm);
   font-family: var(--font-mono);
   font-size: var(--text-xs);
   color: var(--text-muted);
 }
 
-/* ---------- attribution ---------- */
-
+/* Attribution */
 .spray__meta {
   margin: 0;
   font-family: var(--font-mono);

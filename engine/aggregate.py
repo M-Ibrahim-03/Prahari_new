@@ -39,6 +39,8 @@ class CellAssessment:
     wet_hours: int
     min_temp_c: float
     mean_wet_temp_c: float
+    firing_model: str = ""
+    firing_pathogen: str = ""
 
 
 def _daily_index_groups(times: Sequence[str]) -> list[tuple[str, list[int]]]:
@@ -96,20 +98,27 @@ def daily_stats(
     return out
 
 
-def assess_cell(days: Sequence[DayStats], params: dict, severity: dict) -> CellAssessment:
+BAND_RANK = {"act": 2, "watch": 1, "safe": 0}
+
+
+def assess_cell(
+    days: Sequence[DayStats],
+    params: dict,
+    severity: dict,
+    model_id: str = "",
+    pathogen: str = "",
+) -> CellAssessment:
     """Combine daily stats into a risk band. ml_delta is 0 in Phase 1 (physics only)."""
-    crit = criterion_met([d.qualifies for d in days], params["consecutive_days"])
+    crit = criterion_met([d.qualifies for d in days], params.get("consecutive_days", 1))
     dsv_accum = sum(d.dsv for d in days)
     dsv_today = days[0].dsv if days else 0
 
     spray = severity["spray_threshold_dsv"]
     amber = severity["amber_threshold_dsv"]
-    # Severity-gated bands: the Hutton criterion escalates to "watch" only when disease
+    # Severity-gated bands: the criterion escalates to "watch" only when disease
     # severity is actually developing (dsv_accum > 0). When the criterion is met but DSV is 0
-    # because the wet-spell temperature is outside the pathogen's viable range (e.g. > 26.6 C
-    # in monsoon heat), the cell is "safe" for this disease — avoiding a district-wide false
-    # alarm (PRD §37: false alarms are the worst outcome). mean_wet_temp_c is exposed in the
-    # artefact so this reason is auditable.
+    # because the wet-spell temperature is outside the pathogen's viable range,
+    # the cell is "safe" for this disease — avoiding a district-wide false alarm.
     if dsv_accum >= spray:
         band = "act"
     elif dsv_accum >= amber or (crit and dsv_accum > 0):
@@ -129,4 +138,29 @@ def assess_cell(days: Sequence[DayStats], params: dict, severity: dict) -> CellA
         wet_hours=days[0].wet_hours if days else 0,
         min_temp_c=days[0].min_temp_c if days else 0.0,
         mean_wet_temp_c=days[0].mean_wet_temp_c if days else 0.0,
+        firing_model=model_id,
+        firing_pathogen=pathogen,
     )
+
+
+def combine_cell_assessments(assessments: Sequence[CellAssessment]) -> CellAssessment:
+    """Combine multiple model assessments for a single cell using worst-band-wins.
+
+    If bands tie, highest risk wins. Preserves the firing model ID and pathogen.
+    """
+    if not assessments:
+        return CellAssessment(
+            band="safe", risk=0.0, physics_risk=0.0, ml_delta=0.0,
+            criterion_met=False, dsv_today=0, dsv_accum=0,
+            wet_hours=0, min_temp_c=0.0, mean_wet_temp_c=0.0,
+            firing_model="", firing_pathogen="",
+        )
+
+    # Sort descending by band rank (act > watch > safe), then by risk
+    sorted_assessments = sorted(
+        assessments,
+        key=lambda a: (BAND_RANK.get(a.band, 0), a.risk),
+        reverse=True,
+    )
+    return sorted_assessments[0]
+

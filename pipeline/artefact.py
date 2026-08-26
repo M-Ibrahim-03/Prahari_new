@@ -6,10 +6,11 @@ Applies the §29.6 payload budget: 4-decimal coords, 2-decimal floats, drop unkn
 """
 from __future__ import annotations
 
-from typing import Sequence
+from typing import Optional, Sequence
 
 from engine.aggregate import CellAssessment
 from engine.grid import Grid
+from engine.spray import SprayReport, best_window
 
 SCHEMA_VERSION = "2.0.0"
 
@@ -40,13 +41,19 @@ def build_feature_collection(
     engine_git_sha: str,
     data_status: str,
     degradation: Sequence[str],
+    spray_reports: Optional[Sequence[Optional[SprayReport]]] = None,
+    confidences: Optional[Sequence[float]] = None,
 ) -> dict:
     if len(assessments) != len(grid.cells):
         raise ValueError(f"{len(assessments)} assessments for {len(grid.cells)} cells")
+    if spray_reports is not None and len(spray_reports) != len(grid.cells):
+        raise ValueError(f"{len(spray_reports)} spray reports for {len(grid.cells)} cells")
+    if confidences is not None and len(confidences) != len(grid.cells):
+        raise ValueError(f"{len(confidences)} confidences for {len(grid.cells)} cells")
 
     counts = {"safe": 0, "watch": 0, "act": 0}
     features = []
-    for cell, a in zip(grid.cells, assessments):
+    for i, (cell, a) in enumerate(zip(grid.cells, assessments)):
         counts[a.band] += 1
         props = {
             "cell_id": cell.cell_id,
@@ -60,7 +67,22 @@ def build_feature_collection(
             "wet_hours": a.wet_hours,
             "min_temp_c": round(a.min_temp_c, 2),
             "mean_wet_temp_c": round(a.mean_wet_temp_c, 2),  # 🔴 exposed: reveals silent-bug 2
+            "firing_model": a.firing_model,
+            "firing_pathogen": a.firing_pathogen,
         }
+        # Confidence (§21.5) — a genuine [0,1] number from data completeness and node spread,
+        # computed in the pipeline (confidence.py). Number only; the client labels it per language.
+        if confidences is not None:
+            props["confidence"] = round(confidences[i], 2)
+
+        # Spray window (§29.5) — only where one was computed and found. Absence of the keys means
+        # "no clean window", read by the client as the general timing, never as a fabricated hour.
+        best = best_window(spray_reports[i]) if spray_reports is not None else None
+        if best is not None:
+            props["spray_start_hour"] = best.start_idx
+            props["spray_end_hour"] = best.end_idx
+            props["spray_quality"] = round(best.quality, 2)
+            props["spray_blocked_by"] = list(best.bounded_by)
         features.append({
             "type": "Feature",
             "geometry": {"type": "Polygon", "coordinates": cell_polygon(cell.lat, cell.lon, cell_step_deg)},

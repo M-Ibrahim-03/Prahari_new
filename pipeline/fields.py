@@ -13,6 +13,7 @@ from typing import Optional, Sequence
 
 from engine.advisory import build_advisory
 from engine.aggregate import CellAssessment
+from engine.confidence import compute_field_confidence
 from engine.fields import resolve_cell_index, sort_worst_first
 from engine.grid import Grid
 
@@ -35,6 +36,7 @@ def build_field_payload(
     data_status: str,
     degradation: Sequence[str],
     spray_windows: Optional[dict] = None,
+    confidences: Optional[Sequence[float]] = None,
 ) -> dict:
     """One entry per field in `fields_cfg` belonging to `district_code`.
 
@@ -74,10 +76,11 @@ def build_field_payload(
                 field_name=spoken_name, crop=f["crop"], band=a.band,
                 criterion_met=a.criterion_met, dsv_accum=a.dsv_accum,
                 wet_hours=a.wet_hours, mean_wet_temp_c=a.mean_wet_temp_c,
-                min_wet_hours=min_wet_hours, spray_window=window,
+                min_wet_hours=min_wet_hours,
+                spray_window=(window["text"].get(lang) if window else None),
             )
 
-        entries.append({
+        entry = {
             "id": f["id"],
             "name_hi": f["name_hi"],
             "name_en": f["name_en"],
@@ -95,8 +98,24 @@ def build_field_payload(
             "wet_hours": a.wet_hours,
             "min_temp_c": round(a.min_temp_c, 2),
             "mean_wet_temp_c": round(a.mean_wet_temp_c, 2),  # 🔴 exposed: reveals silent-bug 2
+            "firing_model": a.firing_model,
+            "firing_pathogen": a.firing_pathogen,
             "advisory": advisory,
-        })
+        }
+        # Field confidence is the MIN of its intersecting cells (§21.5, worst-case). A config field
+        # resolves to one cell, so that cell's confidence stands; the helper keeps the invariant
+        # explicit for the day a field spans several cells.
+        if confidences is not None:
+            entry["confidence"] = round(compute_field_confidence([confidences[idx]]), 2)
+
+        # Spray-window fields (§29.5) only when a window exists — an 'act' field with no clean
+        # window shows the general `when_act_no_window` phrasing instead, never a fabricated hour.
+        if window:
+            entry["spray_start_hour"] = window["start_hour"]
+            entry["spray_end_hour"] = window["end_hour"]
+            entry["spray_quality"] = window["quality"]
+            entry["spray_blocked_by"] = window["blocked_by"]
+        entries.append(entry)
 
     entries = sort_worst_first(entries)   # 🔴 worst first: the problem before anything else
 

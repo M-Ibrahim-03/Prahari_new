@@ -27,8 +27,15 @@ const L = {
     doseTitle: 'कौन सी दवा और कितनी मात्रा?',
     doseBody: 'यह ऐप दवा का नाम और मात्रा नहीं बताता। अपने KVK या कृषि अधिकारी से पूछें।',
     doseWhy: 'ज़िले की मंज़ूर की गई दवाओं की सूची इस ऐप में अभी डाली नहीं गई है।',
-    windowTitle: 'कौन से घंटे सबसे अच्छे हैं — यह हिसाब अभी नहीं बना',
-    windowBody: 'ऊपर लिखा समय ही मानें।',
+    windowBlocked: {
+      RAIN_NOW: 'बारिश के घंटे छोड़ दिए',
+      RAIN_AFTER: 'छिड़काव बारिश से पहले पूरा हो',
+      WIND_HIGH: 'तेज़ हवा के घंटे छोड़ दिए',
+      WIND_CALM: 'बिलकुल शांत हवा के घंटे छोड़ दिए',
+      TEMP_HIGH: 'ज़्यादा गर्मी के घंटे छोड़ दिए',
+      DARK: 'अँधेरे के घंटे छोड़ दिए',
+      TOO_LATE: 'बीमारी शुरू होने के बाद के घंटे छोड़ दिए',
+    } as Record<string, string>,
     notBuilt: 'अभी नहीं बना',
     staleWarn: 'यह पुराना डेटा है। छिड़काव का फ़ैसला इस पर न लें — नया डेटा आने तक रुकें।',
     deviceVoice: 'फ़ोन की आवाज़ (रिकॉर्डेड आवाज़ अभी नहीं)',
@@ -57,8 +64,16 @@ const L = {
     doseTitle: 'Which medicine, and how much?',
     doseBody: 'This app does not name a medicine or an amount. Ask your KVK or agriculture officer.',
     doseWhy: "The district's approved list has not been loaded into this app yet.",
-    windowTitle: 'Which hours are best — that calculation is not built yet',
-    windowBody: 'Follow the timing shown above.',
+    windowNote: 'Best hours are shown above.',
+    windowBlocked: {
+      RAIN_NOW: 'rain hours skipped',
+      RAIN_AFTER: 'spray must finish before the rain',
+      WIND_HIGH: 'high-wind hours skipped',
+      WIND_CALM: 'dead-calm hours skipped',
+      TEMP_HIGH: 'too-hot hours skipped',
+      DARK: 'dark hours skipped',
+      TOO_LATE: 'hours after infection onset skipped',
+    } as Record<string, string>,
     notBuilt: 'Not yet implemented',
     staleWarn: 'This data is old. Do not decide a spray on it — wait for fresh data.',
     deviceVoice: "Phone's own voice (recorded audio not yet available)",
@@ -192,19 +207,6 @@ export function SprayScreen({
             </section>
           )}
 
-          {/* The hourly window scorer of §13.1 (FR-7.1/7.2) is not wired: pipeline/nightly.py never
-              passes `spray_windows`, so every act advisory carries the general `when_act_no_window`
-              phrasing. Saying so keeps the timing above from reading as a ranked best hour. */}
-          {needsSpray && (
-            <section className="spray__note">
-              <h3 className="spray__note-title">
-                <span aria-hidden="true">🕘</span> {t.windowTitle}
-              </h3>
-              <p className="spray__note-body">{t.windowBody}</p>
-              <span className="spray__tag">{t.notBuilt}</span>
-            </section>
-          )}
-
           {g.unknown.length > 0 && (
             <section className="spray__section">
               <h3 className="spray__section-head">{t.unknownHead}</h3>
@@ -276,6 +278,16 @@ function FieldAdvice({
             <span className="spray__when-copy">
               <span className="spray__when-label">{t.whenLabel}</span>
               <span className="spray__when-text">{advisory.when}</span>
+              {/* Why the window ends where it does (§13.2). Timing without a reason reads as
+                  arbitrary; the reason is what lets a farmer trust "not this afternoon". */}
+              {field.band === 'act' && field.spray_blocked_by && field.spray_blocked_by.length > 0 && (
+                <span className="spray__when-reason">
+                  {field.spray_blocked_by
+                    .map((code) => t.windowBlocked[code])
+                    .filter(Boolean)
+                    .join(' · ')}
+                </span>
+              )}
             </span>
           </div>
 

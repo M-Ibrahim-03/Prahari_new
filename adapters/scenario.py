@@ -77,6 +77,18 @@ def _hourly_temp(spec: ScenarioSpec, hour: int) -> float:
     return mean - amp * math.cos((hour - 5) / 24.0 * 2 * math.pi)
 
 
+def _hourly_wind(hour: int) -> float:
+    """Light diurnal breeze: calmest before dawn (~1 m/s at 04:00), freshest mid-afternoon
+    (~3.5 m/s at 16:00). Depends on the hour only, never on the node, so a scenario with no
+    gradients stays byte-identical across cells (the determinism the ledger hash relies on).
+    The band sits inside the spray gates' [wind_min, wind_max], so daytime hours are sprayable
+    unless rain or darkness rules them out — which is what makes the window demo show a window.
+    """
+    mean, amp = 2.25, 1.25
+    return mean - amp * math.cos((hour - 4) / 24.0 * 2 * math.pi)
+
+
+
 def _wet_window(hours: int) -> set[int]:
     """The wet spell straddles dawn — leaves are wettest overnight and dry off mid-morning.
 
@@ -120,6 +132,7 @@ def build_series(
         rh: list[float] = []
         dew: list[float] = []
         precip: list[float] = []
+        wind: list[float] = []
         for _ in range(spec.days):
             for h in range(24):
                 t = round(_hourly_temp(spec, h) + t_off, 2)
@@ -128,6 +141,7 @@ def build_series(
                 rh.append(r)
                 dew.append(round(dew_point_from_rh(t, r), 2))
                 precip.append(round(precip_per_wet_hour, 2) if h in wet else 0.0)
+                wind.append(round(_hourly_wind(h), 2))
 
         out.append(NodeSeries(
             lat=lat, lon=lon, times=tuple(times),
@@ -136,6 +150,7 @@ def build_series(
                 "relative_humidity_2m": tuple(rh),
                 "dew_point_2m": tuple(dew),
                 "precipitation": tuple(precip),
+                "wind_speed_10m": tuple(wind),
             },
         ))
     return out

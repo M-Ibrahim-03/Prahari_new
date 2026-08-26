@@ -36,9 +36,19 @@ export interface FieldEntry {
   wet_hours?: number
   min_temp_c?: number
   mean_wet_temp_c?: number
+  firing_model?: string
+  firing_pathogen?: string
+  confidence?: number
+  confidence_label?: string
+  spray_start_hour?: number
+
+  spray_end_hour?: number
+  spray_quality?: number
+  spray_blocked_by?: string[]
   advisory?: Record<string, Advisory>
   note?: string
 }
+
 
 export interface FieldPayload {
   prahari: {

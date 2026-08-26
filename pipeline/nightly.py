@@ -20,13 +20,18 @@ import yaml
 
 from adapters.scenario import ScenarioProvider, spec_from_config
 from adapters.weather import DEFAULT_VARIABLES, OpenMeteoProvider, align_from_date
-from engine.aggregate import assess_cell, daily_stats
+from engine.aggregate import assess_cell, combine_cell_assessments, daily_stats
+from engine.confidence import compute_cell_confidence
+from engine.ensemble import compute_nwp_agreement
+from engine.fields import resolve_cell_index
 from engine.grid import build_grid
 from engine.interpolate import rh_from_temp_and_dewpoint
+from engine.spray import best_window, spray_windows
 from pipeline.artefact import build_feature_collection
 from adapters.tts import synthesise_manifest
 from pipeline.fields import build_clip_manifest, build_field_payload
 from pipeline.ledger import append_entry, verify_chain
+from pipeline.spray_text import render_window_phrase
 
 ROOT = Path(__file__).resolve().parent.parent
 CONFIG_DIR = ROOT / "pipeline" / "config"
@@ -61,11 +66,15 @@ def load_yaml(path: Path) -> dict:
 
 
 def interpolate_cells(grid, node_series, today_date):
-    """Downscale node hourly series to per-cell (times, temp, rh, precip).
+    """Downscale node hourly series to per-cell (times, temp, rh, precip, wind).
 
     🔴 RH is recomputed from interpolated T and dew point via Magnus — never interpolated
     or lapse-corrected directly (§8.3). Elevation lapse is a no-op here (flat Ganga plain);
     the elevation adapter wires in later without changing this contract.
+
+    Wind is carried through (bilinear, same as precip) for the spray-window gates (§13.2). It is
+    optional: a provider that gives no wind yields None per hour, and the spray gates that need it
+    simply cannot fire rather than fabricating a value.
     """
     aligned = [align_from_date(s, today_date) for s in node_series]
     n_hours = min(len(s.times) for s in aligned)
@@ -74,11 +83,13 @@ def interpolate_cells(grid, node_series, today_date):
     temp_by_node = [s.variables["temperature_2m"] for s in aligned]
     dew_by_node = [s.variables["dew_point_2m"] for s in aligned]
     precip_by_node = [s.variables["precipitation"] for s in aligned]
+    wind_by_node = [s.variables.get("wind_speed_10m") for s in aligned]
+    have_wind = all(w is not None for w in wind_by_node)
 
     per_cell = []
     for cell in grid.cells:
         idx, w = cell.node_idx, cell.weights
-        c_times, c_temp, c_rh, c_precip = [], [], [], []
+        c_times, c_temp, c_rh, c_precip, c_wind = [], [], [], [], []
         for h in range(n_hours):
             t_corners = [temp_by_node[n][h] for n in idx]
             d_corners = [dew_by_node[n][h] for n in idx]
@@ -91,16 +102,57 @@ def interpolate_cells(grid, node_series, today_date):
             c_temp.append(t_cell)
             c_rh.append(rh_from_temp_and_dewpoint(t_cell, d_cell))  # 🔴 recompute, don't carry
             c_precip.append(sum(pv * wv for pv, wv in zip(p_corners, w)))
-        per_cell.append((c_times, c_temp, c_rh, c_precip))
+            if have_wind:
+                s_corners = [wind_by_node[n][h] for n in idx]
+                c_wind.append(None if any(v is None for v in s_corners)
+                              else sum(sv * wv for sv, wv in zip(s_corners, w)))
+            else:
+                c_wind.append(None)
+        per_cell.append((c_times, c_temp, c_rh, c_precip, c_wind))
     return per_cell
 
 
-def run_district(dist: dict, model: dict, run_id: str, today_date: str, engine_sha: str,
+def compute_cell_confidences(grid, node_series, today_date, per_cell) -> list[float]:
+    """Per-cell confidence in [0,1] (§21.5) — genuine signals, no extra network.
+
+    completeness = share of the window's hours that had valid corner data (missing hours are
+    dropped upstream, never fabricated); spatial score = spread of the cell's four bounding nodes'
+    mean temperature (a rapid gradient lowers confidence). NWP agreement is the honest single-model
+    baseline (0.85, §28.3 L6) until a second weather model is wired — computed via ensemble.py so
+    the code path is live rather than dead.
+    """
+    aligned = [align_from_date(s, today_date) for s in node_series]
+    # One NWP model in this build -> documented 0.85 baseline (engine.ensemble, L6 degradation).
+    model_agreement = compute_nwp_agreement([aligned[0].variables.get("temperature_2m", [])])
+    target = max((len(c[0]) for c in per_cell), default=1) or 1
+
+    confs: list[float] = []
+    for cell, celldata in zip(grid.cells, per_cell):
+        c_times = celldata[0]
+        completeness = len(c_times) / target
+        corner_means = []
+        for n in cell.node_idx:
+            temps = [t for t in aligned[n].variables.get("temperature_2m", []) if t is not None]
+            if temps:
+                corner_means.append(sum(temps) / len(temps))
+        if len(corner_means) >= 2:
+            m = sum(corner_means) / len(corner_means)
+            var = sum((x - m) ** 2 for x in corner_means) / len(corner_means)
+        else:
+            var = 0.0
+        confs.append(compute_cell_confidence(
+            node_variances=[var], data_completeness=completeness, model_agreement=model_agreement))
+    return confs
+
+
+def run_district(dist: dict, models: list, run_id: str, today_date: str, engine_sha: str,
                  fields_cfg=None, templates=None, with_audio: bool = False,
                  scenario=None) -> dict:
-    params = model["params"]
-    severity = model["severity"]
-    dsv_table = severity["dsv_table"]
+    # The headline model owns the artefact `model` block, the spray-window params, and the field
+    # payload's min_wet_hours. Every model in `models` is still run per cell (worst band wins).
+    primary = models[0]
+    params = primary["params"]
+    ver_by_id = {m["_id"]: m["version"] for m in models}
 
     grid = build_grid(
         district=dist["code"],
@@ -138,11 +190,33 @@ def run_district(dist: dict, model: dict, run_id: str, today_date: str, engine_s
     print(f"  fetched {len(node_series)} node series, {len(node_series[0].times)} hours each")
 
     per_cell = interpolate_cells(grid, node_series, window_date)
+    spray_params = primary.get("spray")
 
     assessments = []
-    for (c_times, c_temp, c_rh, c_precip) in per_cell:
-        days = daily_stats(c_times, c_temp, c_rh, c_precip, params, dsv_table)
-        assessments.append(assess_cell(days, params, severity))
+    spray_reports = []   # aligned to cells; SprayReport for 'act' cells, None otherwise
+    for (c_times, c_temp, c_rh, c_precip, c_wind) in per_cell:
+        # 🔴 Multi-pathogen: run EVERY model against this cell's weather, then take the worst band
+        # (engine.combine_cell_assessments). The winner's id/pathogen rides on the assessment so the
+        # artefact can say which disease drove the verdict — never a blank attribution.
+        cell_results = []
+        for m in models:
+            m_days = daily_stats(c_times, c_temp, c_rh, c_precip,
+                                 m["params"], m["severity"]["dsv_table"])
+            cell_results.append(assess_cell(m_days, m["params"], m["severity"],
+                                            model_id=m["_id"], pathogen=m["pathogen"]))
+        a = combine_cell_assessments(cell_results)
+        assessments.append(a)
+        # Only compute a window where one is actionable: 'act' cells. Watch/safe advisories never
+        # render a window, and scoring 400+ safe cells every night would be wasted work.
+        # 🔴 risk_onset_idx (the TOO_LATE gate) is intentionally not wired yet — it needs the
+        # infection-timing model of a later phase; until then windows are gated on weather only.
+        if spray_params and a.band == "act":
+            spray_reports.append(spray_windows(c_times, c_temp, c_precip, c_wind, spray_params))
+        else:
+            spray_reports.append(None)
+
+    # Per-cell confidence (§21.5) — computed from the same weather, emitted into both artefacts.
+    confidences = compute_cell_confidences(grid, node_series, window_date, per_cell)
 
     fc = build_feature_collection(
         grid=grid,
@@ -151,11 +225,13 @@ def run_district(dist: dict, model: dict, run_id: str, today_date: str, engine_s
         run_id=run_id,
         district_code=dist["code"],
         horizon="today",
-        model_id=model["_id"],
-        model_version=model["version"],
+        model_id=primary["_id"],
+        model_version=primary["version"],
         engine_git_sha=engine_sha,
         data_status=data_status,
         degradation=degradation,
+        spray_reports=spray_reports,
+        confidences=confidences,
     )
 
     out_dir = ARTEFACT_DIR / out_code
@@ -174,12 +250,40 @@ def run_district(dist: dict, model: dict, run_id: str, today_date: str, engine_s
 
     # ── Farmer-facing field payload (a few KB — §29.6) ────────────────────────
     if fields_cfg and templates:
+        # Per-field spray windows: resolve each field to its cell, take that cell's best window,
+        # and render the human phrase in every language. build_advisory drops the phrase into the
+        # `when_act` line; the numeric fields ride along on the entry for the artefact contract.
+        spray_by_field: dict[str, dict] = {}
+        if spray_params:
+            for f in fields_cfg:
+                if f.get("district") != dist["code"]:
+                    continue
+                idx = resolve_cell_index(grid, f["center"]["lat"], f["center"]["lon"],
+                                         dist["cell_step_deg"])
+                best = best_window(spray_reports[idx]) if idx is not None else None
+                if best is None:
+                    continue
+                c_times = per_cell[idx][0]
+                text = {
+                    lang: render_window_phrase(c_times, best.start_idx, best.end_idx,
+                                               templates[lang]["spray_window_phrase"])
+                    for lang in templates
+                }
+                spray_by_field[f["id"]] = {
+                    "text": text,
+                    "start_hour": best.start_idx,
+                    "end_hour": best.end_idx,
+                    "quality": round(best.quality, 2),
+                    "blocked_by": list(best.bounded_by),
+                }
+
         fp = build_field_payload(
             grid=grid, assessments=assessments, fields_cfg=fields_cfg, templates=templates,
             cell_step_deg=dist["cell_step_deg"], min_wet_hours=params["min_wet_hours"],
-            run_id=run_id, district_code=dist["code"], model_id=model["_id"],
-            model_version=model["version"], engine_git_sha=engine_sha,
+            run_id=run_id, district_code=dist["code"], model_id=primary["_id"],
+            model_version=primary["version"], engine_git_sha=engine_sha,
             data_status=data_status, degradation=degradation,
+            spray_windows=spray_by_field, confidences=confidences,
         )
         f_path = out_dir / "fields.json"
         f_payload = json.dumps(fp, separators=(",", ":"), ensure_ascii=False)
@@ -225,11 +329,14 @@ def run_district(dist: dict, model: dict, run_id: str, today_date: str, engine_s
             {k: p[k] for k in ("dsv_accum_7d", "wet_hours", "min_temp_c",
                                "mean_wet_temp_c", "criterion_met")},
             sort_keys=True, separators=(",", ":"))
+        # 🔴 Record which model actually fired this alert (worst-band winner), not just the
+        # district's headline model — the ledger must be honest about attribution.
+        fired = p.get("firing_model") or primary["_id"]
         append_entry(ledger_path, {
             "seq": seq_start + n_alerts,
             "timestamp": run_id,
             "cell_id": p["cell_id"],
-            "model": f"{model['_id']}@{model['version']}",
+            "model": f"{fired}@{ver_by_id.get(fired, primary['version'])}",
             "engine_sha": engine_sha,
             "band": "act",
             "inputs_digest": "sha256:" + hashlib.sha256(digest_src.encode()).hexdigest(),
@@ -290,10 +397,17 @@ def main() -> None:
     for dist in districts_cfg["districts"]:
         if not dist.get("active"):
             continue
-        model = dict(models_cfg[dist["model"]])
-        model["_id"] = dist["model"]
-        print(f"\ndistrict: {dist['code']} ({dist['name']}, {dist['state']})")
-        res = run_district(dist, model, run_id, today_date, engine_sha, fields_cfg, templates,
+        # A district may declare several models (multi-pathogen). Fall back to the single `model`
+        # key for older configs. The first entry is the headline model for the artefact.
+        model_ids = dist.get("models") or [dist["model"]]
+        models = []
+        for mid in model_ids:
+            m = dict(models_cfg[mid])
+            m["_id"] = mid
+            models.append(m)
+        print(f"\ndistrict: {dist['code']} ({dist['name']}, {dist['state']})  "
+              f"models: {', '.join(model_ids)}")
+        res = run_district(dist, models, run_id, today_date, engine_sha, fields_cfg, templates,
                            with_audio, scenario)
         if res["ledger_path"] not in ledgers:
             ledgers.append(res["ledger_path"])

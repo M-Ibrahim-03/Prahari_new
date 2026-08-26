@@ -13,5 +13,11 @@ districts:
     half_span_deg: 0.20                   # ~44 km box
     node_step_deg: 0.10                   # ~11 km weather nodes (~Open-Meteo native)
     cell_step_deg: 0.02                   # ~2 km computation cells
-    model: potato_late_blight_hutton      # -> pipeline/config/models.yaml
+    model: potato_late_blight_hutton      # headline model (artefact `model` block) -> models.yaml
+    # 🔴 Multi-pathogen (§8.4.3). Every model in this list is run against the SAME weather and the
+    # worst band wins per cell (engine.aggregate.combine_cell_assessments). firing_model/pathogen
+    # on each cell records which one actually drove the verdict, so the app can say *why*.
+    models:
+      - potato_late_blight_hutton         # Phytophthora infestans (oomycete) — Hutton + Wallin DSV
+      - potato_early_blight_tomcast       # Alternaria solani (fungus)    — TOMCAST DSV
     active: true

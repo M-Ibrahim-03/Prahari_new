@@ -76,9 +76,22 @@ export function WhyPanel({
 
             <dt>{t.dsvAccum}</dt>
             <dd>{field.dsv_accum_7d ?? 0} <span className="muted">({t.limit} 18)</span></dd>
+
+            {field.firing_pathogen && (
+              <>
+                <dt>{lang === 'hi' ? 'रोग' : 'Disease'}</dt>
+                <dd><em>{field.firing_pathogen}</em></dd>
+              </>
+            )}
+            {field.confidence !== undefined && (
+              <>
+                <dt>{lang === 'hi' ? 'सटीकता विश्वास' : 'Confidence'}</dt>
+                <dd>{Math.round(field.confidence * 100)}% {field.confidence_label ? `(${field.confidence_label})` : ''}</dd>
+              </>
+            )}
           </dl>
           <p className="why__meta">
-            {t.model}: {modelId} v{modelVersion}
+            {t.model}: {field.firing_model || modelId} v{modelVersion}
             {field.cell_id && <> · {t.cell} {field.cell_id}</>}
           </p>
         </div>
@@ -86,6 +99,7 @@ export function WhyPanel({
     </div>
   )
 }
+
 
 function fmt(n: number | undefined): string {
   return n === undefined || n === null ? '—' : n.toFixed(1)

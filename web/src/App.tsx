@@ -4,6 +4,9 @@ import { DegradationNotice } from './components/DegradationNotice'
 import { FieldCard } from './components/FieldCard'
 import { MapScreen } from './components/MapScreen'
 import { SprayScreen } from './components/SprayScreen'
+import { TrustScreen } from './screens/Trust'
+import { AskModal } from './components/AskModal'
+import { LeafScanModal } from './components/LeafScanModal'
 import { BAND, bandSemantic } from './lib/bandToSemantic'
 import { sortWorstFirst, type Lang } from './lib/types'
 import { useFieldPayload } from './lib/useFieldPayload'
@@ -34,11 +37,12 @@ function initialView(): string {
   return VIEWS.some((v) => v.id === q) ? (q as string) : DISTRICT
 }
 
-type Screen = 'today' | 'map' | 'spray'
+type Screen = 'today' | 'map' | 'spray' | 'trust'
 
 const L = {
   hi: {
     title: 'प्रहरी', addField: 'दूसरा खेत जोड़ें', demoNote: 'डेमो खेत',
+    scanLeaf: '📸 पत्ती जाँच',
     loading: 'लोड हो रहा है…',
     emptyTitle: 'कोई खेत नहीं', emptyBody: 'अपना पहला खेत जोड़ें।',
     errorTitle: 'डेटा नहीं मिला', errorRetry: 'फिर कोशिश करें',
@@ -51,6 +55,7 @@ const L = {
   },
   en: {
     title: 'PRAHARI', addField: 'Add another field', demoNote: 'demo fields',
+    scanLeaf: '📸 Scan Leaf',
     loading: 'Loading…',
     emptyTitle: 'No fields yet', emptyBody: 'Add your first field.',
     errorTitle: 'Could not load data', errorRetry: 'Try again',
@@ -67,6 +72,8 @@ export default function App() {
   const [lang, setLang] = useState<Lang>('hi')
   const [screen, setScreen] = useState<Screen>('today')
   const [view, setView] = useState<string>(initialView)
+  const [showAsk, setShowAsk] = useState<boolean>(false)
+  const [showLeafScan, setShowLeafScan] = useState<boolean>(false)
   const state = useFieldPayload(view)
   const t = L[lang]
   const fields = state.status === 'ready' ? state.data.fields : []
@@ -97,6 +104,14 @@ export default function App() {
         </select>
         <button
           className="topbar__lang"
+          onClick={() => setShowLeafScan(true)}
+          title={t.scanLeaf}
+          style={{ minWidth: 'auto', padding: '0 8px', fontSize: '0.85rem' }}
+        >
+          {t.scanLeaf}
+        </button>
+        <button
+          className="topbar__lang"
           onClick={() => setLang(lang === 'hi' ? 'en' : 'hi')}
           aria-label={lang === 'hi' ? 'Switch to English' : 'हिंदी में बदलें'}
         >
@@ -118,7 +133,9 @@ export default function App() {
           </div>
         )}
 
-        {screen === 'map' ? (
+        {screen === 'trust' ? (
+          <TrustScreen lang={lang} onClose={() => setScreen('today')} view={view} />
+        ) : screen === 'map' ? (
           <MapScreen fields={fields} lang={lang} center={DISTRICT_CENTER} />
         ) : (
           <>
@@ -176,12 +193,18 @@ export default function App() {
                       primary={i === 0}
                       modelId={state.data.prahari.model.id}
                       modelVersion={state.data.prahari.model.version}
+                      district={state.data.prahari.district}
+                      runId={state.data.prahari.run_id}
                     />
                   ))
                 )}
 
-                <button className="addfield" disabled title={t.soon}>
-                  ➕ {t.addField} <span className="muted">({t.soon})</span>
+                <button
+                  className="addfield"
+                  onClick={() => setScreen('map')}
+                  title={lang === 'hi' ? 'नक्शे पर खेत सीमांकन करें' : 'Draw field on map'}
+                >
+                  ➕ {t.addField}
                 </button>
 
                 <p className="footnote">
@@ -213,9 +236,35 @@ export default function App() {
         >
           💊<span>{t.nav.spray}</span>
         </button>
-        <button className="bottomnav__item" disabled title={t.soon}>🎤<span>{t.nav.ask}</span></button>
-        <button className="bottomnav__item" disabled title={t.soon}>☰<span>{t.nav.more}</span></button>
+        <button
+          className="bottomnav__item"
+          onClick={() => setShowAsk(true)}
+          title={t.nav.ask}
+        >
+          🎤<span>{t.nav.ask}</span>
+        </button>
+        <button
+          className={screen === 'trust' ? 'bottomnav__item bottomnav__item--active' : 'bottomnav__item'}
+          onClick={() => setScreen('trust')}
+        >
+          ☰<span>{t.nav.more}</span>
+        </button>
       </nav>
+
+      {showAsk && (
+        <AskModal
+          lang={lang}
+          fields={fields}
+          onClose={() => setShowAsk(false)}
+        />
+      )}
+
+      {showLeafScan && (
+        <LeafScanModal
+          lang={lang}
+          onClose={() => setShowLeafScan(false)}
+        />
+      )}
     </div>
   )
 }

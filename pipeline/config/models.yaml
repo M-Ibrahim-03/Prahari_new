@@ -25,4 +25,49 @@ models:
         - { t_min: 7.2,  t_max: 11.6, breaks: [[15, 0], [18, 1], [21, 2], [24, 3]] }
         - { t_min: 11.7, t_max: 15.0, breaks: [[12, 0], [15, 1], [18, 2], [21, 3], [24, 4]] }
         - { t_min: 15.1, t_max: 26.6, breaks: [[9, 0], [12, 1], [15, 2], [18, 3], [24, 4]] }
+    # Spray-window gates (PRD §13.2, FR-7.1/7.2). Applied by engine/spray.py — TIMING ONLY, never
+    # a product or dose. Thresholds are agronomy, so they live here and not in code (§8.4.3).
+    spray:
+      rain_free_hours_after: 4.0     # spray must dry on before rain returns, or it washes off
+      max_rain_mm_during: 0.2        # an hour wetter than this counts as "raining"
+      wind_max_ms: 4.0               # above this, drift onto neighbours / off-target
+      wind_min_ms: 0.5               # below this, no mixing + inversion risk (uneven deposition)
+      temp_max_c: 33.0               # above this, evaporation / scorch / label breach
+      min_window_hours: 2.0          # shorter than this is not worth mobilising for
+      ideal_window_hours: 3.0        # recommend a focused best slice this long, not the whole span
+      daylight_start_hour: 6         # inclusive — no spraying in the dark
+      daylight_end_hour: 18          # exclusive
     citation: "Hutton criteria; Wallin (1962); Smith (1956); BLITECAST (Krause et al. 1975)"
+
+  potato_early_blight_tomcast:
+    version: "1.0.0"
+    crop: potato
+    pathogen: "Alternaria solani"
+    pathogen_kind: fungus            # Early blight is a fungus (late blight is an oomycete)
+    criterion: tomcast
+    params:
+      rh_threshold: 88.0             # Leaf wetness / high RH threshold
+      min_wet_hours: 4
+      min_temp_c: 13.0
+      consecutive_days: 1            # TOMCAST evaluates single-day DSV accumulation
+    severity:
+      method: tomcast_dsv
+      spray_threshold_dsv: 20        # accumulated DSV -> "act"
+      amber_threshold_dsv: 15        # accumulated DSV -> "watch"
+      dsv_table:
+        - { t_min: 13.0, t_max: 17.0, breaks: [[7, 0], [13, 1], [18, 2], [21, 3], [24, 4]] }
+        - { t_min: 17.1, t_max: 20.0, breaks: [[4, 0], [9, 1], [14, 2], [18, 3], [24, 4]] }
+        - { t_min: 20.1, t_max: 25.5, breaks: [[3, 0], [6, 1], [9, 2], [13, 3], [16, 4]] }
+        - { t_min: 25.6, t_max: 29.0, breaks: [[4, 0], [9, 1], [14, 2], [18, 3], [24, 4]] }
+    spray:
+      rain_free_hours_after: 4.0
+      max_rain_mm_during: 0.2
+      wind_max_ms: 4.0
+      wind_min_ms: 0.5
+      temp_max_c: 33.0
+      min_window_hours: 2.0
+      ideal_window_hours: 3.0
+      daylight_start_hour: 6
+      daylight_end_hour: 18
+    citation: "TOMCAST model; Madden et al. (1978); Pitblado (1992)"
+

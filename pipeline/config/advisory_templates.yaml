@@ -33,6 +33,14 @@ languages:
     action_safe:  कुछ नहीं करना है
     action_watch: दवा तैयार रखें
     action_act:   बताए समय पर छिड़काव करें
+    # Spray-window phrasing (§13.1). The pipeline renders the {window} the `when_act` line needs
+    # from the engine's window indices, using these words — weekday, part of day, Devanagari
+    # numerals — so a new language is still a config edit. weekdays are Monday-first (date.weekday).
+    spray_window_phrase:
+      weekdays: [सोमवार, मंगलवार, बुधवार, गुरुवार, शुक्रवार, शनिवार, रविवार]
+      parts: { morning: सुबह, midday: दोपहर, evening: शाम }
+      digits: "०१२३४५६७८९"
+      template: "{day} {part} {start}–{end} बजे"
 
   en:
     name: English
@@ -57,3 +65,8 @@ languages:
     action_safe:  Nothing to do
     action_watch: Get medicine ready
     action_act:   Spray in the window shown
+    spray_window_phrase:
+      weekdays: [Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday]
+      parts: { morning: morning, midday: midday, evening: evening }
+      digits: "0123456789"
+      template: "{day} {part}, {start}–{end}"

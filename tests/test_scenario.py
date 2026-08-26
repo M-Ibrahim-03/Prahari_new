@@ -233,7 +233,7 @@ def test_configured_scenarios_produce_the_bands_they_advertise():
         series = ScenarioProvider(spec, centre).fetch(list(grid.nodes))
         per_cell = interpolate_cells(grid, series, spec.start_date)
         out = []
-        for (times, temp, rh, precip) in per_cell:
+        for (times, temp, rh, precip, _wind) in per_cell:
             days = daily_stats(times, temp, rh, precip, params, severity["dsv_table"])
             out.append(assess_cell(days, params, severity))
         return out
