@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { DataAge } from './components/DataAge'
 import { DegradationNotice } from './components/DegradationNotice'
 import { FieldCard } from './components/FieldCard'
+import { IndicesPanel } from './components/IndicesPanel'
 import { MapScreen } from './components/MapScreen'
 import { SprayScreen } from './components/SprayScreen'
 import { TrustScreen } from './screens/Trust'
@@ -198,6 +199,8 @@ export default function App() {
                     />
                   ))
                 )}
+
+                <IndicesPanel meta={state.data.prahari} lang={lang} />
 
                 <button
                   className="addfield"

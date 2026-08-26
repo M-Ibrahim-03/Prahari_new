@@ -1,0 +1,23 @@
+
+/* ── Indices 2 & 4: irrigation + mandi (IndicesPanel) ─────────────────────────
+   Deliberately a different visual family from the disease bands: no red/amber/green,
+   so a price or water line can never be mistaken for a spray verdict. */
+.indices { margin: 1.25rem 0 0.5rem; padding: 0.9rem; border: 1px solid #2b3a4a;
+  border-radius: 12px; background: #141c25; }
+.indices__heading { margin: 0 0 0.15rem; font-size: 1.05rem; color: #cfe3f5; }
+.indices__scope { margin: 0 0 0.7rem; font-size: 0.78rem; color: #8ea3b8; line-height: 1.4; }
+.indices__block { padding-top: 0.6rem; border-top: 1px solid #223140; margin-top: 0.6rem; }
+.indices__sub { margin: 0 0 0.3rem; font-size: 0.95rem; color: #a8c6e2; }
+.indices__lead { margin: 0 0 0.25rem; font-size: 1rem; font-weight: 600; color: #eaf3fb; }
+.indices__detail { margin: 0.15rem 0; font-size: 0.82rem; color: #9db3c8; line-height: 1.45; }
+.indices__detail--strong { color: #cfe3f5; font-weight: 600; margin-top: 0.5rem; }
+.indices__warn { margin: 0.5rem 0 0; font-size: 0.8rem; color: #e8c88a; line-height: 1.45; }
+.indices__stale { margin: 0.55rem 0 0; font-size: 0.76rem; color: #8ea3b8;
+  font-style: italic; line-height: 1.4; }
+.mandi-list { list-style: none; margin: 0.4rem 0 0; padding: 0; }
+.mandi { display: flex; flex-direction: column; gap: 0.1rem; padding: 0.45rem 0.55rem;
+  border-radius: 8px; margin-bottom: 0.3rem; background: #1b2530; }
+.mandi--best { background: #1e2f27; border: 1px solid #2f4a3a; }
+.mandi__name { font-size: 0.9rem; font-weight: 600; color: #eaf3fb; }
+.mandi__meta { font-size: 0.74rem; color: #8ea3b8; }
+.mandi__net { font-size: 0.86rem; font-weight: 700; color: #9fd8b0; }

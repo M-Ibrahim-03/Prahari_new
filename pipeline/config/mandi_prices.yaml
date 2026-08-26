@@ -1,0 +1,55 @@
+# Agmarknet mandi price snapshot — the market-access index input (deck p.2/p.5).
+#
+# 🔴 THIS IS A DATED SNAPSHOT, NOT A LIVE FEED, AND THE UI SAYS SO.
+# Agmarknet's live API (data.gov.in) requires a free account and an API key. That is a signup the
+# hackathon build does not assume, so prices are pinned here with the date they were observed and
+# the app labels them "snapshot" wherever it shows a rupee figure. Swapping in the live adapter
+# means filling AGMARKNET_API_KEY in .env — no code change (see adapters/mandi.py).
+#
+# Prices are modal price in ₹ per quintal for potato, as published on Agmarknet.
+# 🔴 Never present these as today's price. A farmer who trucks a load on a stale quote and finds a
+# lower price at the gate has been actively harmed by this app.
+
+commodity: potato
+unit: inr_per_quintal
+observed_on: "2026-08-20"
+source: "Agmarknet (data.gov.in) — manually captured snapshot"
+
+# Round-trip transport is charged per km in engine/market.rank_mandis. This is a mid-range hired
+# tractor-trolley rate for the Farrukhabad belt; it is a stated assumption, not a measurement.
+transport_inr_per_km: 18.0
+
+# Typical smallholder load used for the net-realisation comparison.
+default_load_quintals: 20.0
+
+districts:
+  farrukhabad:
+    # distance_km is road distance from Farrukhabad mandi.
+    mandis:
+      - name_en: Farrukhabad
+        name_hi: फर्रुखाबाद
+        distance_km: 5
+        modal_price: 1160
+      - name_en: Kannauj
+        name_hi: कन्नौज
+        distance_km: 42
+        modal_price: 1205
+      - name_en: Kanpur
+        name_hi: कानपुर
+        distance_km: 95
+        modal_price: 1290
+      - name_en: Agra
+        name_hi: आगरा
+        distance_km: 210
+        modal_price: 1340
+
+    # Recent modal price at the home mandi, oldest first. Feeds engine.market.compute_momentum.
+    history:
+      - { date: "2026-08-13", modal_price: 1075 }
+      - { date: "2026-08-14", modal_price: 1090 }
+      - { date: "2026-08-15", modal_price: 1085 }
+      - { date: "2026-08-16", modal_price: 1110 }
+      - { date: "2026-08-17", modal_price: 1125 }
+      - { date: "2026-08-18", modal_price: 1140 }
+      - { date: "2026-08-19", modal_price: 1150 }
+      - { date: "2026-08-20", modal_price: 1160 }

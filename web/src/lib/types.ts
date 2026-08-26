@@ -68,8 +68,66 @@ export interface FieldPayload {
     field_count: number
     distinct_audio_clips: number
     distinct_body_clips: number
+    /**
+     * Index 2 — FAO-56 root-zone water balance (engine/water.py).
+     *
+     * 🔴 Optional, and the UI MUST omit the card when it is absent rather than render zeros: a
+     * missing balance shown as 0 mm depletion reads as "no water stress", which is a confident
+     * wrong answer. `resolution` is 'district_mean', NOT the 1 km² of the disease grid.
+     */
+    water?: {
+      band: 'wet' | 'adequate' | 'deficit' | 'critical'
+      depletion_mm: number
+      raw_mm: number
+      taw_mm: number
+      stress_coefficient: number
+      days_until_irrigation: number | null
+      rain_mm: number
+      etc_mm: number
+      hours_scored: number
+      resolution: 'district_mean'
+      assumptions: string[]
+    }
+    /**
+     * Index 4 — mandi price momentum (engine/market.py).
+     *
+     * 🔴 `is_snapshot` is always true in this build and `observed_on` is the date the prices were
+     * captured. Never render a rupee figure from this object without also rendering that date.
+     * Every comparison is on net-of-transport realisation, so the highest `modal_price` is often
+     * NOT `best`.
+     */
+    market?: {
+      momentum: 'rising' | 'flat' | 'falling' | 'unknown'
+      change_pct: number
+      latest_price: number
+      mean_price: number
+      advice_key: string
+      best: MandiOption | null
+      alternatives: MandiOption[]
+      load_quintals: number
+      transport_inr_per_km: number
+      commodity: string
+      unit: string
+      observed_on: string
+      source: string
+      is_snapshot: boolean
+      caveats: string[]
+    }
   }
   fields: FieldEntry[]
+}
+
+export interface MandiOption {
+  mandi: string
+  mandi_hi: string
+  modal_price: number
+  distance_km: number
+  transport_cost_inr: number
+  net_price_per_quintal: number
+  /** Net of round-trip transport for `load_quintals`. This is what the ranking sorts on. */
+  net_realisation_inr: number
+  /** What the headline price alone suggested, before transport ate into it. */
+  gross_premium_inr: number
 }
 
 /**

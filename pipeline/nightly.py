@@ -22,6 +22,7 @@ from adapters.scenario import ScenarioProvider, spec_from_config
 from adapters.weather import DEFAULT_VARIABLES, OpenMeteoProvider, align_from_date
 from engine.aggregate import assess_cell, combine_cell_assessments, daily_stats
 from engine.confidence import compute_cell_confidence
+from pipeline.indices import compute_district_water_balance, load_market_signal
 from engine.ensemble import compute_nwp_agreement
 from engine.fields import resolve_cell_index
 from engine.grid import build_grid
@@ -218,6 +219,15 @@ def run_district(dist: dict, models: list, run_id: str, today_date: str, engine_
     # Per-cell confidence (§21.5) — computed from the same weather, emitted into both artefacts.
     confidences = compute_cell_confidences(grid, node_series, window_date, per_cell)
 
+    # ── Indices 2 and 4: FAO-56 water balance and mandi price momentum ────────
+    # 🔴 Both are DISTRICT-level, not per-cell, and every consumer must say so. The water balance
+    # needs et0_fao_evapotranspiration, which the per-cell interpolation does not carry (per_cell is
+    # temp/rh/precip/wind only), so it is computed from the district's node series instead. Claiming
+    # 1 km² irrigation advice off a district mean would be a resolution lie — the disease grid earns
+    # its 1 km² claim, these two do not.
+    water = compute_district_water_balance(node_series)
+    market = load_market_signal(dist["code"])
+
     fc = build_feature_collection(
         grid=grid,
         assessments=assessments,
@@ -286,6 +296,13 @@ def run_district(dist: dict, models: list, run_id: str, today_date: str, engine_
             spray_windows=spray_by_field, confidences=confidences,
         )
         f_path = out_dir / "fields.json"
+        # 🔴 Attached under `prahari`, not onto each field entry: both indices are district-level
+        # (see the note where they are computed), and putting them on a per-field object would imply
+        # a per-field resolution neither one has. `resolution` and `is_snapshot` travel with them.
+        if water is not None:
+            fp["prahari"]["water"] = water
+        if market is not None:
+            fp["prahari"]["market"] = market
         f_payload = json.dumps(fp, separators=(",", ":"), ensure_ascii=False)
         f_path.write_text(f_payload, encoding="utf-8")
         meta = fp["prahari"]
