@@ -1,128 +1,326 @@
 # PRAHARI — Demo Deployment, Step by Step
 
-Exact commands for a working public demo. Follow the parts **in order**: Part B ships the anon key
-to the browser, and that key is only safe once Part A's Row Level Security is live.
+Exact commands for a working public demo. Follow the parts **in order** — A must finish before C,
+because C publishes the anon key to the browser and A is what makes that key safe.
 
-Your Supabase project ref is **`muuyogxmaoiybeadmxvr`** (this is public — it is inside the URL that
-ships in the browser bundle). Everywhere below that appears as `<REF>`, use that value.
+Your Supabase project ref is **`muuyogxmaoiybeadmxvr`**. This is public information — it is inside
+the URL that ships in the browser bundle.
 
-Total time: about 25 minutes. Everything here is free tier. **Nothing in this guide costs money.**
+Total time: about **35 minutes**. Everything here is free tier. **Nothing in this guide costs money.**
+
+## What you're doing, at a glance
+
+| Part | What | Where | Required? |
+|---|---|---|---|
+| **A** | Database tables + Row Level Security | Supabase dashboard, browser | **Yes** — before C |
+| **B** | Deploy 2 edge functions, set the Gemini secret | Terminal | Optional; app degrades honestly without it |
+| **C** | Frontend build + 3 env vars | Vercel dashboard | **Yes** |
+| **D** | Nightly forecast refresh | GitHub settings | Optional |
+
+Before you start, confirm you have all four keys locally. From `clone_latest/prahari`:
+
+```bash
+grep -oE '^(GEMINI_API_KEY|SUPABASE_URL|SUPABASE_ANON_KEY|SUPABASE_SERVICE_KEY|MAPTILER_KEY)' .env | sort
+```
+
+You need at minimum `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `MAPTILER_KEY` (for Part C) and
+`GEMINI_API_KEY` (for Part B). If `.env` is missing, see step A1.
 
 ---
 
-## Part A — Database (5 min, browser only)
+## Part A — Database schema + RLS (8 min, browser only)
 
-RLS must exist before the anon key is public. With RLS off, that key is a read/write handle to the
-whole database.
+**Why this part comes first:** Part C publishes `SUPABASE_ANON_KEY` inside a JavaScript file that
+every visitor downloads. That is by design — it is a JWT carrying the role `anon`, and what makes it
+safe is not secrecy, it is the Row Level Security policies you are about to create. Ship the key
+before the policies exist and it becomes a public read-and-write handle to your whole database.
 
-1. Open <https://supabase.com/dashboard> → your project → **SQL Editor** → **New query**.
-2. Open `supabase/schema.sql` from this repo, copy the whole file, paste it in.
-3. Click **Run**. Expect `Success. No rows returned`.
-   - The file is re-runnable, so if you already pasted an older version, just run this one again.
-4. Verify RLS is actually on — paste this and Run:
+### A0. Open the right project
+
+1. Go to <https://supabase.com/dashboard> and log in.
+2. Click your project. Look at the browser address bar — it must read
+   `.../project/muuyogxmaoiybeadmxvr`. If it shows a different ref, you are in the wrong project
+   and everything below will land in the wrong place.
+
+### A1. Get your keys into `.env` (skip if `.env` already has them)
+
+Your `.env` at the repo root should already contain `SUPABASE_URL` and `SUPABASE_ANON_KEY`. To
+check, from `clone_latest/prahari`:
+
+```bash
+grep -c SUPABASE_ANON_KEY .env
+```
+
+`1` means it's there. If you get `0`, fetch them from the dashboard:
+
+1. Left sidebar → the gear icon (**Project Settings**) → **API Keys** (older dashboards call this
+   page **API**).
+2. **Project URL** → this is `SUPABASE_URL`. It looks like
+   `https://muuyogxmaoiybeadmxvr.supabase.co` — no trailing slash.
+3. The **`anon` / `public`** key (newer dashboards label it **publishable**) → this is
+   `SUPABASE_ANON_KEY`. It is a long string starting `eyJ`.
+4. 🔴 On the same page there is a **`service_role`** / **secret** key. **Do not copy that one into
+   anything the browser touches.** It bypasses RLS completely. It belongs only in `.env` as
+   `SUPABASE_SERVICE_KEY`, used by the Python pipeline on your machine.
+
+### A2. Run the schema
+
+1. Left sidebar → **SQL Editor**.
+2. Click **+ New query** (top left of that pane).
+3. In this repo open `supabase/schema.sql`. Select **all** of it (Ctrl+A) and copy (Ctrl+C).
+4. Click into the empty SQL editor box and paste (Ctrl+V).
+5. Click **Run** (bottom right, or Ctrl+Enter).
+6. Expected result: a green **Success. No rows returned**.
+
+The file is written to be re-runnable — every `create policy` is preceded by
+`drop policy if exists`, so if you pasted an older version earlier, just run this one again. It
+does not delete data.
+
+**If you get an error instead:**
+
+| Error text | Cause | Fix |
+|---|---|---|
+| `policy "…" for table "…" already exists` | You ran an **old** copy of the file. | Make sure you copied the current `supabase/schema.sql` from this repo — it has the `drop policy` lines. Re-run. |
+| `permission denied` | You are logged in as a non-owner member. | Use the account that owns the project. |
+| `relation "…" does not exist` | Only part of the file got pasted. | Ctrl+A in the editor, delete, re-paste the **whole** file. |
+
+### A3. Verify the four things that must be true
+
+Do not skip this. Each of these was a real bug at some point in the build.
+
+**Check 1 — the tables exist.** New query, paste, Run:
+
+```sql
+select table_name from information_schema.tables
+where table_schema='public' order by table_name;
+```
+
+You must see at least: `cell_feedback_k5`, `devices`, `feedback`, `ledger_records`.
+
+**Check 2 — RLS is actually on.** This is the one that protects you:
 
 ```sql
 select tablename, rowsecurity from pg_tables
 where schemaname='public' and tablename in ('devices','feedback','ledger_records');
 ```
 
-All three rows must show `rowsecurity = true`. **If any is false, stop** and re-run step 3;
-do not continue to Part B.
+All three rows must show `rowsecurity = true`. 🔴 **If any row shows `false`, stop here.** Re-run
+A2 and re-check. Do not do Part C until all three are `true`.
 
-5. Confirm the k≥5 view is reachable (this was a real bug — the view had no grant):
+**Check 3 — anon can write feedback but not read it back.** The app's whole feedback path depends
+on the first, and farmer privacy depends on the second:
 
 ```sql
-select has_table_privilege('anon','cell_feedback_k5','select');
+select
+  has_table_privilege('anon','feedback','insert') as can_insert,
+  has_table_privilege('anon','devices','insert')  as can_add_device,
+  has_table_privilege('anon','cell_feedback_k5','select') as can_read_aggregate;
 ```
 
-Must return `true`.
+All three must be `true`. `can_read_aggregate` is the k≥5 view — the view had no `GRANT` at one
+point, which silently made it unreadable.
+
+**Check 4 — an anonymous insert really works.** This simulates exactly what a farmer's phone does.
+It runs inside a transaction that rolls back, so it leaves no test row behind:
+
+```sql
+begin;
+set local role anon;
+insert into feedback (idempotency_key, device_hash, district, cell_id, field_ref, run_id, feedback_type)
+values ('deploy-test-1', 'deploy-test-device', 'farrukhabad', 'c1', 'f1', '2026-08-26T00:00:00Z', 'false_alarm');
+select count(*) as rows_anon_can_read from feedback;
+reset role;
+rollback;
+```
+
+Two things must both happen:
+- the `insert` **succeeds** — that's the ⚠️ यह गलत है button working;
+- `rows_anon_can_read` comes back **`0`** — anon may submit feedback but must never read anyone
+  else's. If that number is greater than 0, the `No public read on individual feedback` policy
+  didn't apply; re-run A2.
+
+If the insert fails with `new row violates row-level security policy`, the insert policy is missing —
+re-run A2.
+
+✅ **Part A is done.** Your database is now safe to point a public app at.
 
 ---
 
-## Part B — Edge Functions (10 min, terminal)
+## Part B — Edge Functions: the real AI (12 min, terminal)
 
-This is what turns on the real AI. Until it's done, Ask falls back to deterministic engine text and
-leaf scan shows the visual self-check guide. **Both of those are working features, not errors** — so
-if this part fails, your demo still works.
+This is what turns Gemini on. **If this part fails your demo still works** — Ask falls back to
+deterministic engine text and leaf scan shows the visual self-check guide, both of which are real
+shipped features, not error screens. So do Part C even if B goes wrong.
+
+Two functions get deployed:
+
+| Function | What it does | Called from |
+|---|---|---|
+| `ask` | Rephrases the engine's verdict into natural Hindi/English. It may **only** rephrase — the §27.5 gate rejects any reply that invents a number, names a chemical, or contradicts the band. | 🎤 पूछें button |
+| `leaf-scan` | Gemini Vision looks at a leaf photo and returns one of four labels. Spray timing still comes from the weather engine, never the photo. | 📸 पत्ती जाँच button |
 
 ### B1. Install the Supabase CLI
 
-It is not currently installed. Pick one:
+It is **not** installed on this machine right now. Open a terminal (Git Bash) and run:
 
 ```bash
 npm install -g supabase
 ```
 
-If that errors, use Scoop instead:
-
-```bash
-scoop install supabase
-```
-
-Verify:
+Then confirm — you should see a version number like `2.115.0`:
 
 ```bash
 supabase --version
 ```
 
-### B2. Log in and link
+**If `npm install -g` fails** (permissions, or npm refuses to install the binary), use Scoop:
+
+```bash
+powershell -c "irm get.scoop.sh | iex"
+```
+
+```bash
+scoop install supabase
+```
+
+**If you don't want to install anything at all**, put `npx ` in front of every `supabase` command
+below (e.g. `npx supabase login`). It works, it's just slower each time, and the first call will
+ask you to confirm the download — answer `y`.
+
+### B2. Move into the project folder
+
+Every command from here must run from the repo root, the folder that contains the `supabase/`
+directory:
+
+```bash
+cd "C:/Users/muham/OneDrive/Desktop/Test/claudeproj/clone_latest/prahari"
+```
+
+Confirm you're in the right place — this must print `functions` and `schema.sql`:
+
+```bash
+ls supabase
+```
+
+### B3. Log in
 
 ```bash
 supabase login
 ```
 
-That opens a browser. Then, from the repo root (`clone_latest/prahari`):
+This prints a URL and opens your browser. Approve it, copy the token it shows if it asks, paste it
+back into the terminal. Confirm it worked — this should list your project:
+
+```bash
+supabase projects list
+```
+
+### B4. Link this folder to your project
 
 ```bash
 supabase link --project-ref muuyogxmaoiybeadmxvr
 ```
 
-If it asks for the database password, it's in Supabase → **Settings → Database**.
+- It may ask for your **database password**. That is *not* your Supabase login password. Find it at
+  Dashboard → gear icon → **Database** → **Database password** → **Reset database password** if you
+  never saved it.
+- Linking is only needed once; it writes `supabase/.temp/`, which is gitignored.
 
-### B3. Give the functions the Gemini key
+### B5. Store the Gemini key **on the server only**
 
-The key must live **only** on the server. Copy the value of `GEMINI_API_KEY` from your `.env`:
+🔴 This is the most important line in the whole guide. The Gemini key must never appear in Vercel,
+never in `web/`, never in `vite.config.ts`. It goes here and nowhere else.
+
+Open `.env`, copy the value after `GEMINI_API_KEY=` (starts with `AIza`), and run:
 
 ```bash
-supabase secrets set GEMINI_API_KEY=paste_your_gemini_key_here
+supabase secrets set GEMINI_API_KEY=paste_the_AIza_value_here
 ```
 
-Confirm it registered (this prints a digest, not the key):
+No quotes needed, no spaces around the `=`. Confirm it registered — this prints a hash digest, not
+the key itself:
 
 ```bash
 supabase secrets list
 ```
 
-### B4. Deploy both functions
+You should see a row named `GEMINI_API_KEY`.
+
+### B6. Deploy the two functions
 
 ```bash
 supabase functions deploy ask
 ```
 
+Wait for `Deployed Functions on project muuyogxmaoiybeadmxvr: ask`. Then:
+
 ```bash
 supabase functions deploy leaf-scan
 ```
 
-Do **not** pass `--no-verify-jwt`. The app sends the anon key as a Bearer token, which is a valid
-JWT, so default verification works and keeps the functions from being open to the world.
+Notes:
+- 🔴 Do **not** add `--no-verify-jwt`. The app already sends the anon key as a Bearer token, which
+  is a valid JWT, so the default works — and it stops the internet at large from burning your free
+  Gemini quota.
+- If it says `Docker is not running`: you don't need Docker for deploys. Add `--use-api`:
+  `supabase functions deploy ask --use-api`.
+- Both functions read `GEMINI_API_KEY` at request time, so if you ever change the secret you do
+  **not** need to redeploy.
 
-### B5. Test `ask` before trusting the UI
+### B7. Prove `ask` works before you trust the UI
 
-Replace `<ANON>` with `SUPABASE_ANON_KEY` from your `.env`:
+Set your anon key as a shell variable once so the next two commands stay readable:
 
 ```bash
-curl -s -X POST "https://muuyogxmaoiybeadmxvr.supabase.co/functions/v1/ask" -H "Content-Type: application/json" -H "Authorization: Bearer <ANON>" -H "apikey: <ANON>" -d "{\"lang\":\"hi\",\"question\":\"मेरे खेत में क्या करना है?\",\"facts\":{\"band\":\"act\",\"crop\":\"potato\",\"dsv_accum_7d\":21,\"wet_hours\":13,\"min_temp_c\":11.2,\"mean_wet_temp_c\":17.4,\"confidence\":0.84}}"
+ANON=$(grep '^SUPABASE_ANON_KEY=' .env | cut -d= -f2-)
+```
+
+Then call the function exactly the way the app does:
+
+```bash
+curl -s -X POST "https://muuyogxmaoiybeadmxvr.supabase.co/functions/v1/ask" -H "Content-Type: application/json" -H "Authorization: Bearer $ANON" -H "apikey: $ANON" -d '{"lang":"hi","question":"मेरे खेत में क्या करना है?","facts":{"band":"act","crop":"potato","dsv_accum_7d":21,"wet_hours":13,"min_temp_c":11.2,"mean_wet_temp_c":17.4,"confidence":0.84}}'
 ```
 
 **Reading the result:**
 
-| Response | Meaning | Action |
+| Response | Meaning | What to do |
 |---|---|---|
-| `{"text":"…Hindi sentence…"}` | Working. | Done. |
-| `{"text":null,"reason":"no_api_key"}` | B3 didn't take. | Redo B3, redeploy B4. |
-| `{"text":null,"reason":"gate:…"}` | Gemini replied but the §27.5 safety gate rejected it (invented a number, named a chemical, or contradicted the band). | **This is correct behaviour.** Run it again; the app falls back to engine text meanwhile. |
-| `{"text":null,"reason":"gemini_http_429"}` | Free-tier rate limit. | Wait a minute. |
-| `401` | Wrong anon key. | Recopy from `.env`. |
+| `{"text":"…a Hindi sentence…"}` | ✅ Working. Gemini answered and the safety gate passed it. | Nothing. Move on. |
+| `{"text":null,"reason":"no_api_key"}` | B5 didn't take. | Redo B5, then redo B6. |
+| `{"text":null,"reason":"gate:chemical:mancozeb"}` | Gemini named a fungicide. Blocked. | ✅ **The system working.** Retry for a passing sample. |
+| `{"text":null,"reason":"gate:invented_number:400"}` | Gemini produced a figure that wasn't in the input facts. Blocked. | ✅ Same — retry. |
+| `{"text":null,"reason":"gate:dose_pattern"}` / `gate:ppe_or_reentry` / `gate:band_contradiction:act` | A dose, a PPE instruction, or advice contradicting the band. Blocked. | ✅ Same — retry. |
+| `{"text":null,"reason":"gemini_http_429"}` | Free-tier rate limit. | Wait 60 seconds, retry. |
+| `{"text":null,"reason":"gemini_http_400"}` | Key present but invalid, or the Generative Language API isn't enabled for it. | Re-copy from <https://aistudio.google.com/apikey>, redo B5 and B6. |
+| `{"text":null,"reason":"gemini_http_403"}` | Key is restricted (referrer/IP limits). | Make a fresh unrestricted key, redo B5. |
+| `{"code":401,"message":"Invalid JWT"}` | Wrong anon key. | Check `echo $ANON` prints a long `eyJ…` string. |
+| `{"code":404}` | Function name typo, or B6 didn't finish. | Run `supabase functions list`; both `ask` and `leaf-scan` must appear. |
+
+🔴 Any `gate:` reason is a **pass**, not a failure. It is the §27.5 output gate refusing to let a
+language model change a number, name a chemical, or flip a verdict. In the app the user never sees an
+error — they get the engine's own deterministic sentence instead, and the screen marks rung L4.
+
+### B8. Prove `leaf-scan` is reachable
+
+You don't need a real photo to check the plumbing — send a 1-pixel PNG:
+
+```bash
+curl -s -X POST "https://muuyogxmaoiybeadmxvr.supabase.co/functions/v1/leaf-scan" -H "Content-Type: application/json" -H "Authorization: Bearer $ANON" -H "apikey: $ANON" -d '{"lang":"hi","image":"iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFAAH/q842iQAAAABJRU5ErkJggg=="}'
+```
+
+Any JSON back that mentions `label` or `uncertain` means the function is live and the key works —
+a blank pixel *should* come back `uncertain`, which is the honest answer. A `404` means B6 didn't
+complete for this function.
+
+### B9. Watch the logs (only if something is wrong)
+
+Dashboard → **Edge Functions** → click `ask` → **Logs**. Or:
+
+```bash
+supabase functions logs ask
+```
+
+✅ **Part B is done.** The AI is live.
 
 ---
 
