@@ -55,6 +55,14 @@ export default defineConfig(({ mode }) => {
   // Read the repo-root .env (the single place keys live) rather than duplicating it into web/.
   const env = loadEnv(mode, path.resolve(__dirname, '..'), '')
 
+  // 🔴 loadEnv reads .env FILES ONLY — it never looks at process.env. On a CI or hosting platform
+  // (Vercel, GitHub Actions) there is no .env file because .env is gitignored, and the keys arrive
+  // as real environment variables instead. Without this fallback every value below would be '' in
+  // production: the map would render keyless, aiConfigured() would return false so Ask and
+  // leaf-scan could never reach the edge functions, and every feedback write would be dropped —
+  // all of it silently, because '' is a valid string and nothing would throw.
+  const fromEnv = (name: string): string => env[name] ?? process.env[name] ?? ''
+
   // 🔴 EXPLICIT ALLOWLIST — do not switch this to Vite's VITE_* convention.
   // With a prefix convention, any future variable that happens to be prefixed is shipped to the
   // browser automatically; the root .env also holds the Supabase SERVICE key and the Gemini key,
@@ -74,9 +82,27 @@ export default defineConfig(({ mode }) => {
   // bypasses RLS entirely, and anything named here is inlined verbatim into a JavaScript file that
   // every visitor downloads. There is no such thing as a hidden value in a browser bundle.
   const browserEnv = {
-    __MAPTILER_KEY__: JSON.stringify(env.MAPTILER_KEY ?? ''),
-    __SUPABASE_URL__: JSON.stringify(env.SUPABASE_URL ?? ''),
-    __SUPABASE_ANON_KEY__: JSON.stringify(env.SUPABASE_ANON_KEY ?? ''),
+    __MAPTILER_KEY__: JSON.stringify(fromEnv('MAPTILER_KEY')),
+    __SUPABASE_URL__: JSON.stringify(fromEnv('SUPABASE_URL')),
+    __SUPABASE_ANON_KEY__: JSON.stringify(fromEnv('SUPABASE_ANON_KEY')),
+  }
+
+  // 🔴 Fail loudly at BUILD time, not silently at runtime in a farmer's hand. A production build
+  // with an empty Supabase URL still runs — it just quietly has no AI and no feedback path, which
+  // is the hardest class of bug to notice from a screenshot. Dev builds stay permissive so the app
+  // works offline with no keys at all.
+  if (mode === 'production') {
+    const missing = Object.entries(browserEnv)
+      .filter(([, v]) => v === '""')
+      .map(([k]) => k.replace(/^__|__$/g, ''))
+    if (missing.length) {
+      console.warn(
+        `\n⚠️  PRAHARI build: missing browser env [${missing.join(', ')}].\n` +
+          `   The app will build and run, but features depending on them are disabled:\n` +
+          `   MAPTILER_KEY -> map tiles, SUPABASE_URL/SUPABASE_ANON_KEY -> Ask, leaf scan, feedback.\n` +
+          `   Set them in the host's environment settings (Vercel: Project -> Settings -> Environment Variables).\n`,
+      )
+    }
   }
 
   return {
