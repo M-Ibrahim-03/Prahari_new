@@ -15,8 +15,16 @@
 
 import type { FieldEntry, Lang } from './types'
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string | undefined
-const SUPABASE_ANON = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined
+// 🔴 Injected by the explicit `define` allowlist in web/vite.config.ts, NOT by Vite's VITE_*
+// convention — that convention ships every prefixed variable to the browser automatically, so one
+// careless rename would turn GEMINI_API_KEY into a public string. Reading `import.meta.env.VITE_…`
+// here would silently yield undefined, which is exactly the bug this comment replaces: the real AI
+// path could never activate no matter how the deployment was configured.
+declare const __SUPABASE_URL__: string
+declare const __SUPABASE_ANON_KEY__: string
+
+const SUPABASE_URL = __SUPABASE_URL__ || undefined
+const SUPABASE_ANON = __SUPABASE_ANON_KEY__ || undefined
 
 export type AskSource = 'ai' | 'engine'
 export interface AskResult {

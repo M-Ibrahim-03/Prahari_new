@@ -25,13 +25,22 @@ export function getDeviceHash(): string {
   return hash
 }
 
-export async function submitFeedbackRemote(payload: FeedbackSubmission): Promise<{ ok: boolean; error?: string }> {
-  const url = import.meta.env.VITE_SUPABASE_URL
-  const key = import.meta.env.VITE_SUPABASE_ANON_KEY
+// 🔴 Injected by the explicit `define` allowlist in web/vite.config.ts, NOT Vite's VITE_* convention.
+// Reading import.meta.env.VITE_SUPABASE_URL here yields undefined in this project, which silently
+// disabled every remote write.
+declare const __SUPABASE_URL__: string
+declare const __SUPABASE_ANON_KEY__: string
 
+export async function submitFeedbackRemote(payload: FeedbackSubmission): Promise<{ ok: boolean; error?: string }> {
+  const url = __SUPABASE_URL__
+  const key = __SUPABASE_ANON_KEY__
+
+  // 🔴 Reporting ok:true here would be a lie, and an expensive one: the outbox treats ok:true as
+  // "delivered" and drops the queued item, so an unconfigured build would silently discard every
+  // farmer's correction. Unconfigured is a real failure — name it, keep the item queued, and let
+  // the L8 rung say so.
   if (!url || !key) {
-    // Graceful offline mock / degradation L8
-    return { ok: true }
+    return { ok: false, error: 'supabase_not_configured' }
   }
 
   try {
